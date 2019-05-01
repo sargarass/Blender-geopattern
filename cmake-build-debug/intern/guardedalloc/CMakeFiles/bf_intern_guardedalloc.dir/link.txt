@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_guardedalloc.a  CMakeFiles/bf_intern_guardedalloc.dir/intern/mallocn.c.o CMakeFiles/bf_intern_guardedalloc.dir/intern/mallocn_guarded_impl.c.o CMakeFiles/bf_intern_guardedalloc.dir/intern/mallocn_lockfree_impl.c.o
-/usr/bin/ranlib ../../lib/libbf_intern_guardedalloc.a

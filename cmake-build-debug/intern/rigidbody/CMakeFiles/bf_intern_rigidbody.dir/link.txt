@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_rigidbody.a  CMakeFiles/bf_intern_rigidbody.dir/rb_bullet_api.cpp.o
-/usr/bin/ranlib ../../lib/libbf_intern_rigidbody.a

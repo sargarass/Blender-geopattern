@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../../lib/libbf_physics.a  CMakeFiles/bf_physics.dir/intern/BPH_mass_spring.cpp.o CMakeFiles/bf_physics.dir/intern/hair_volume.cpp.o CMakeFiles/bf_physics.dir/intern/implicit_blender.c.o CMakeFiles/bf_physics.dir/intern/implicit_eigen.cpp.o
-/usr/bin/ranlib ../../../lib/libbf_physics.a

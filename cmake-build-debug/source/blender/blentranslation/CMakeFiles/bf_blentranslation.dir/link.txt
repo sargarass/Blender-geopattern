@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../../lib/libbf_blentranslation.a  CMakeFiles/bf_blentranslation.dir/intern/blt_lang.c.o CMakeFiles/bf_blentranslation.dir/intern/blt_translation.c.o
-/usr/bin/ranlib ../../../lib/libbf_blentranslation.a

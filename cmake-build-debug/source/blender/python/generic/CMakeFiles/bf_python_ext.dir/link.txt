@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../../../lib/libbf_python_ext.a  CMakeFiles/bf_python_ext.dir/bgl.c.o CMakeFiles/bf_python_ext.dir/blf_py_api.c.o CMakeFiles/bf_python_ext.dir/bpy_internal_import.c.o CMakeFiles/bf_python_ext.dir/bpy_threads.c.o CMakeFiles/bf_python_ext.dir/idprop_py_api.c.o CMakeFiles/bf_python_ext.dir/py_capi_utils.c.o
-/usr/bin/ranlib ../../../../lib/libbf_python_ext.a

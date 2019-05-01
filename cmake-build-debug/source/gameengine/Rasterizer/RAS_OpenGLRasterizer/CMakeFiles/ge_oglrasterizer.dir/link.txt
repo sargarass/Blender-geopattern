@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../../../lib/libge_oglrasterizer.a  CMakeFiles/ge_oglrasterizer.dir/RAS_ListRasterizer.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_OpenGLLight.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_OpenGLOffScreen.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_OpenGLSync.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_OpenGLRasterizer.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_StorageVA.cpp.o CMakeFiles/ge_oglrasterizer.dir/RAS_StorageVBO.cpp.o
-/usr/bin/ranlib ../../../../lib/libge_oglrasterizer.a

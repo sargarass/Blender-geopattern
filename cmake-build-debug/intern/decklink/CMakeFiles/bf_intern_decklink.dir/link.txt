@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_decklink.a  CMakeFiles/bf_intern_decklink.dir/DeckLinkAPI.cpp.o CMakeFiles/bf_intern_decklink.dir/linux/DeckLinkAPIDispatch.cpp.o
-/usr/bin/ranlib ../../lib/libbf_intern_decklink.a

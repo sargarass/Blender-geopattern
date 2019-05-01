@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_opencolorio.a  CMakeFiles/bf_intern_opencolorio.dir/ocio_capi.cc.o CMakeFiles/bf_intern_opencolorio.dir/fallback_impl.cc.o
-/usr/bin/ranlib ../../lib/libbf_intern_opencolorio.a

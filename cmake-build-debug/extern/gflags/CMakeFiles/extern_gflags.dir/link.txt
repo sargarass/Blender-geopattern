@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libextern_gflags.a  CMakeFiles/extern_gflags.dir/src/gflags.cc.o CMakeFiles/extern_gflags.dir/src/gflags_completions.cc.o CMakeFiles/extern_gflags.dir/src/gflags_reporting.cc.o
-/usr/bin/ranlib ../../lib/libextern_gflags.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libextern_cuew.a  CMakeFiles/extern_cuew.dir/src/cuew.c.o
-/usr/bin/ranlib ../../lib/libextern_cuew.a

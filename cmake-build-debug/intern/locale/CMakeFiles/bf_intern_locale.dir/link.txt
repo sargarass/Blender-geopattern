@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_locale.a  CMakeFiles/bf_intern_locale.dir/boost_locale_wrapper.cpp.o
-/usr/bin/ranlib ../../lib/libbf_intern_locale.a

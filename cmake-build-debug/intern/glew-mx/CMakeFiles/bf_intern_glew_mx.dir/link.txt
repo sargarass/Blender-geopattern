@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libbf_intern_glew_mx.a  CMakeFiles/bf_intern_glew_mx.dir/intern/glew-mx.c.o
-/usr/bin/ranlib ../../lib/libbf_intern_glew_mx.a

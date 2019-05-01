@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libextern_xdnd.a  CMakeFiles/extern_xdnd.dir/xdnd.c.o
-/usr/bin/ranlib ../../lib/libextern_xdnd.a

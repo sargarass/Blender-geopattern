@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libextern_glog.a  CMakeFiles/extern_glog.dir/src/logging.cc.o CMakeFiles/extern_glog.dir/src/raw_logging.cc.o CMakeFiles/extern_glog.dir/src/utilities.cc.o CMakeFiles/extern_glog.dir/src/vlog_is_on.cc.o CMakeFiles/extern_glog.dir/src/demangle.cc.o CMakeFiles/extern_glog.dir/src/signalhandler.cc.o CMakeFiles/extern_glog.dir/src/symbolize.cc.o
-/usr/bin/ranlib ../../lib/libextern_glog.a

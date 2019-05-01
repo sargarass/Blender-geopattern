@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../lib/libextern_clew.a  CMakeFiles/extern_clew.dir/src/clew.c.o
-/usr/bin/ranlib ../../lib/libextern_clew.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../../../lib/libcycles_graph.a  CMakeFiles/cycles_graph.dir/node.cpp.o CMakeFiles/cycles_graph.dir/node_type.cpp.o CMakeFiles/cycles_graph.dir/node_xml.cpp.o
-/usr/bin/ranlib ../../../lib/libcycles_graph.a
