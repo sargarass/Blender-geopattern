@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../../../lib/libbf_imbuf_openexr.a  CMakeFiles/bf_imbuf_openexr.dir/openexr_api.cpp.o
+/usr/bin/ranlib ../../../../../lib/libbf_imbuf_openexr.a

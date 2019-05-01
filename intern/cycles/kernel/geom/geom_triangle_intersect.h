@@ -28,7 +28,9 @@ ccl_device_inline bool triangle_intersect(KernelGlobals *kg,
                                           float3 dir,
                                           uint visibility,
                                           int object,
-                                          int prim_addr)
+                                          int prim_addr,
+										  const float t_near = -FLT_MAX,
+										  const float t_far = FLT_MAX)
 {
 	const uint tri_vindex = kernel_tex_fetch(__prim_tri_index, prim_addr);
 #if defined(__KERNEL_SSE2__) && defined(__KERNEL_SSE__)
@@ -50,7 +52,7 @@ ccl_device_inline bool triangle_intersect(KernelGlobals *kg,
 	                          float4_to_float3(tri_c),
 #endif
 	                          &u, &v, &t))
-	{
+	if (t >= t_near && t <= t_far) {
 #ifdef __VISIBILITY_FLAG__
 		/* Visibility flag test. we do it here under the assumption
 		 * that most triangles are culled by node flags.
@@ -160,6 +162,29 @@ ccl_device_inline void triangle_intersect_subsurface(
  * http://www.cs.virginia.edu/~gfx/Courses/2003/ImageSynthesis/papers/Acceleration/Fast%20MinimumStorage%20RayTriangle%20Intersection.pdf
  */
 
+ccl_device_inline float3 triangle_refine(float3 p, float3 dir, float t, float3 tri_a, float3 tri_b, float3 tri_c)
+{
+	p = p + dir*t;
+
+	float3 edge1 = make_float3(tri_a.x - tri_c.x, tri_a.y - tri_c.y, tri_a.z - tri_c.z);
+	float3 edge2 = make_float3(tri_b.x - tri_c.x, tri_b.y - tri_c.y, tri_b.z - tri_c.z);
+	float3 tvec = make_float3(p.x - tri_c.x, p.y - tri_c.y, p.z - tri_c.z);
+	float3 qvec = cross(tvec, edge1);
+	float3 pvec = cross(dir, edge2);
+	float det = dot(edge1, pvec);
+	if(det != 0.0f) {
+		/* If determinant is zero it means ray lies in the plane of
+		 * the triangle. It is possible in theory due to watertight
+		 * nature of triangle intersection. For such cases we simply
+		 * don't refine intersection hoping it'll go all fine.
+		 */
+		float rt = dot(edge2, qvec) / det;
+		p = p + dir*rt;
+	}
+	return p;
+}
+
+
 ccl_device_inline float3 triangle_refine(KernelGlobals *kg,
                                          ShaderData *sd,
                                          const Intersection *isect,
@@ -235,7 +260,7 @@ ccl_device_inline float3 triangle_refine_subsurface(KernelGlobals *kg,
 	float3 D = ray->D;
 	float t = isect->t;
 
-	if(isect->object != OBJECT_NONE) {
+	if(isect->object != OBJECT_NONE && isect->entry_prim != GEOPATTERN_NO_LINK) {
 #ifdef __OBJECT_MOTION__
 		Transform tfm = sd->ob_itfm;
 #else
@@ -273,7 +298,7 @@ ccl_device_inline float3 triangle_refine_subsurface(KernelGlobals *kg,
 	}
 #endif  /* __INTERSECTION_REFINE__ */
 
-	if(isect->object != OBJECT_NONE) {
+	if(isect->object != OBJECT_NONE && isect->entry_prim != GEOPATTERN_NO_LINK) {
 #ifdef __OBJECT_MOTION__
 		Transform tfm = sd->ob_tfm;
 #else

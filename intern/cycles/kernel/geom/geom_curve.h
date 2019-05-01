@@ -229,10 +229,10 @@ ccl_device_inline ssef transform_point_T3(const ssef t[3], const ssef &a)
 #ifdef __KERNEL_SSE2__
 /* Pass P and dir by reference to aligned vector */
 ccl_device_curveintersect bool bvh_cardinal_curve_intersect(KernelGlobals *kg, Intersection *isect,
-	const float3 &P, const float3 &dir, uint visibility, int object, int curveAddr, float time, int type, uint *lcg_state, float difl, float extmax)
+	const float3 &P, const float3 &dir, uint visibility, int object, int curveAddr, float time, int type, uint *lcg_state, float difl, float extmax, const float t_near = -FLT_MAX, const float t_far = FLT_MAX)
 #else
 ccl_device_curveintersect bool bvh_cardinal_curve_intersect(KernelGlobals *kg, Intersection *isect,
-	float3 P, float3 dir, uint visibility, int object, int curveAddr, float time,int type, uint *lcg_state, float difl, float extmax)
+	float3 P, float3 dir, uint visibility, int object, int curveAddr, float time,int type, uint *lcg_state, float difl, float extmax, const float t_near = -FLT_MAX, const float t_far = FLT_MAX)
 #endif
 {
 	const bool is_curve_primitive = (type & PRIMITIVE_CURVE);
@@ -247,7 +247,6 @@ ccl_device_curveintersect bool bvh_cardinal_curve_intersect(KernelGlobals *kg, I
 	int segment = PRIMITIVE_UNPACK_SEGMENT(type);
 	float epsilon = 0.0f;
 	float r_st, r_en;
-
 	int depth = kernel_data.curve.subdivisions;
 	int flags = kernel_data.curve.curveflags;
 	int prim = kernel_tex_fetch(__prim_index, curveAddr);
@@ -666,6 +665,7 @@ ccl_device_curveintersect bool bvh_cardinal_curve_intersect(KernelGlobals *kg, I
 			}
 			/* we found a new intersection */
 
+			if (t >= t_near && t <= t_far)
 #ifdef __VISIBILITY_FLAG__
 			/* visibility flag test. we do it here under the assumption
 			 * that most triangles are culled by node flags */
@@ -695,7 +695,7 @@ ccl_device_curveintersect bool bvh_cardinal_curve_intersect(KernelGlobals *kg, I
 }
 
 ccl_device_curveintersect bool bvh_curve_intersect(KernelGlobals *kg, Intersection *isect,
-	float3 P, float3 direction, uint visibility, int object, int curveAddr, float time, int type, uint *lcg_state, float difl, float extmax)
+	float3 P, float3 direction, uint visibility, int object, int curveAddr, float time, int type, uint *lcg_state, float difl, float extmax, const float t_near = -FLT_MAX, const float t_far = FLT_MAX)
 {
 	/* define few macros to minimize code duplication for SSE */
 #ifndef __KERNEL_SSE2__
@@ -703,7 +703,6 @@ ccl_device_curveintersect bool bvh_curve_intersect(KernelGlobals *kg, Intersecti
 #  define len3(x) len(x)
 #  define dot3(x, y) dot(x, y)
 #endif
-
 	const bool is_curve_primitive = (type & PRIMITIVE_CURVE);
 
 	if(!is_curve_primitive && kernel_data.bvh.use_bvh_steps) {
@@ -910,6 +909,7 @@ ccl_device_curveintersect bool bvh_curve_intersect(KernelGlobals *kg, Intersecti
 				}
 			}
 
+			if (t >= t_near && t <= t_far)
 #ifdef __VISIBILITY_FLAG__
 			/* visibility flag test. we do it here under the assumption
 			 * that most triangles are culled by node flags */
@@ -923,7 +923,6 @@ ccl_device_curveintersect bool bvh_curve_intersect(KernelGlobals *kg, Intersecti
 				isect->prim = curveAddr;
 				isect->object = object;
 				isect->type = type;
-
 				return true;
 			}
 		}

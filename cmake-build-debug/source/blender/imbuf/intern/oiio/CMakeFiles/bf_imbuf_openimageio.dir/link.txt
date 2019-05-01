@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../../../lib/libbf_imbuf_openimageio.a  CMakeFiles/bf_imbuf_openimageio.dir/openimageio_api.cpp.o
+/usr/bin/ranlib ../../../../../lib/libbf_imbuf_openimageio.a

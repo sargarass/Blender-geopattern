@@ -596,6 +596,65 @@ void BlenderSync::sync_objects(float motion_time)
 		}
 	}
 
+    /* geopattern */
+
+    for (auto &mesh_it : scene->meshes) {
+		/*if (!mesh_it->geopattern_settings.link.empty()) {
+			fprintf(stderr, "Geopattern(Mesh %s): attempt to link another mesh to mesh used in geopattern!\n", mesh_it->name.c_str(), mesh_it->geopattern_settings.link.c_str());
+		}*/
+
+        if (!mesh_it->geopattern_settings.link.empty()) {
+            bool found = false;
+            int obj_id = 0;
+            for (auto &search_it : scene->objects) {
+                if (!search_it->mesh) {
+					obj_id++;
+                    continue;
+                }
+
+                if (search_it->mesh == mesh_it) {
+					obj_id++;
+                    continue;
+                }
+
+                if (search_it->name != mesh_it->geopattern_settings.link) {
+					obj_id++;
+                    continue;
+                }
+
+                if (!search_it->mesh->geopattern_settings.link.empty()) {
+					fprintf(stderr, "Geopattern(Mesh %s): attempt to link to geopatterned object %s!\n", mesh_it->name.c_str(), mesh_it->geopattern_settings.link.c_str());
+					obj_id++;
+					continue;
+                }
+				found = true;
+
+				mesh_it->geopattern_settings.olink = obj_id;
+                search_it->mesh->geopattern_settings.used_as_pattern = true;
+                search_it->used_as_pattern = true;
+                printf("Geopattern: linking mesh \"%s\" to mesh \"%s\"\n", mesh_it->name.c_str(), search_it->name.c_str());
+				obj_id++;
+            }
+
+            if (!found) {
+                fprintf(stderr, "Geopattern(Mesh %s): mesh %s wasn't found!\n", mesh_it->name.c_str(), mesh_it->geopattern_settings.link.c_str());
+                fprintf(stderr, "Possible reasons: the mesh does not exist in scene or candidates did not fit\n");
+            }
+        }
+    }
+
+    printf("Meshes geopattern_settings:\n");
+    int idx = 0;
+	for (auto &mesh_it : scene->meshes) {
+        printf("%d: Mesh \"%s\"\n", idx, mesh_it->name.c_str(), idx);
+        printf("\tlink %s\n", mesh_it->geopattern_settings.link.c_str());
+        printf("\tlink obj id %d\n", mesh_it->geopattern_settings.olink);
+        for (auto &&atr : mesh_it->attributes.attributes) {
+            printf("\tattr: %s\n", atr.name.c_str());
+        }
+        idx++;
+    }
+
 	progress.set_sync_status("");
 
 	if(!cancel && !motion) {

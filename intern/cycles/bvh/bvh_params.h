@@ -92,7 +92,7 @@ public:
 		sah_primitive_cost = 1.0f;
 
 		min_leaf_size = 1;
-		max_triangle_leaf_size = 8;
+		max_triangle_leaf_size = 1;
 		max_motion_triangle_leaf_size = 8;
 		max_curve_leaf_size = 1;
 		max_motion_curve_leaf_size = 4;

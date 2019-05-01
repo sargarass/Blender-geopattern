@@ -311,6 +311,7 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 		                      sd,
 		                      &isect,
 		                      ray);
+
 		float rbsdf = path_state_rng_1D_for_decision(kg, rng, state, PRNG_BSDF);
 		shader_eval_surface(kg, sd, rng, state, rbsdf, state->flag, SHADER_CONTEXT_INDIRECT);
 #ifdef __BRANCHED_PATH__
@@ -322,7 +323,6 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 			state->flag &= ~PATH_RAY_SHADOW_CATCHER_ONLY;
 		}
 #endif  /* __SHADOW_TRICKS__ */
-
 		/* blurring of bsdf after bounces, for rays that have a small likelihood
 		 * of following this particular path (diffuse, rough glossy) */
 		if(kernel_data.integrator.filter_glossy != FLT_MAX) {

@@ -177,6 +177,11 @@ ccl_device_inline void object_inverse_normal_transform(KernelGlobals *kg, const 
 }
 
 /* Transform normal from object to world space */
+ccl_device_inline void object_normal_transform(KernelGlobals *kg, int object, float3 *N)
+{
+	Transform tfm = object_fetch_transform(kg, object, OBJECT_INVERSE_TRANSFORM);
+	*N = normalize(transform_direction_transposed(&tfm, *N));
+}
 
 ccl_device_inline void object_normal_transform(KernelGlobals *kg, const ShaderData *sd, float3 *N)
 {

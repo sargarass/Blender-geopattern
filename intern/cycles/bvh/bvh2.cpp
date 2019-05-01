@@ -297,6 +297,26 @@ void BVH2::refit_node(int idx, bool leaf, BoundBox& bbox, uint& visibility)
 
 					triangle.bounds_grow(vpos, bbox);
 
+					if (mesh->geopattern_settings.olink != GEOPATTERN_NO_LINK) {
+						Attribute *attr_vN = mesh->attributes.find(ATTR_STD_VERTEX_NORMAL);
+						if (attr_vN) {
+							bool do_transform = mesh->transform_applied;
+							Transform ntfm = mesh->transform_normal;
+
+							float3 *normals = attr_vN->data_float3();
+
+							for (int i = 0; i < 3; i++) {
+								float3 normal = normals[triangle.v[i]];
+								if (do_transform)
+									normal = safe_normalize(transform_direction(&ntfm, normal));
+								bbox.grow(vpos[triangle.v[i]] + mesh->geopattern_settings.normal_height * normal);
+							}
+							printf("EXTENDING NORMALS!\n");
+						} else {
+							printf("THERE IS NO NORMALS for model. BUG!\n");
+						}
+					}
+
 					/* motion triangles */
 					if(mesh->use_motion_blur) {
 						Attribute *attr = mesh->attributes.find(ATTR_STD_MOTION_VERTEX_POSITION);

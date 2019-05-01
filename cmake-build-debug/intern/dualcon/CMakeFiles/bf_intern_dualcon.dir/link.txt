@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libbf_intern_dualcon.a  CMakeFiles/bf_intern_dualcon.dir/intern/manifold_table.cpp.o CMakeFiles/bf_intern_dualcon.dir/intern/marching_cubes_table.cpp.o CMakeFiles/bf_intern_dualcon.dir/intern/octree.cpp.o CMakeFiles/bf_intern_dualcon.dir/intern/Projections.cpp.o CMakeFiles/bf_intern_dualcon.dir/intern/dualcon_c_api.cpp.o
+/usr/bin/ranlib ../../lib/libbf_intern_dualcon.a

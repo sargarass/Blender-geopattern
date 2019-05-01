@@ -49,103 +49,289 @@ ccl_device void shader_setup_object_transforms(KernelGlobals *kg, ShaderData *sd
 }
 #endif
 
+ccl_device_noinline float3 interpolatePoint(float3 tri_a, float3 tri_b, float3 tri_c, float3 tri_n_a, float3 tri_n_b, float3 tri_n_c, float u, float v, float w) {
+    return (1.0f - u - v) * tri_c + u * tri_a + v * tri_b + w * ((1.0f - u - v) * tri_n_c + u * tri_n_a + v * tri_n_b);
+}
+
+
+
 ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
-                                               ShaderData *sd,
-                                               const Intersection *isect,
-                                               const Ray *ray)
+											   ShaderData *sd,
+											   const Intersection *isect,
+											   const Ray *ray)
 {
 #ifdef __INSTANCING__
-	sd->object = (isect->object == PRIM_NONE)? kernel_tex_fetch(__prim_object, isect->prim): isect->object;
+		sd->object = (isect->object == PRIM_NONE)? kernel_tex_fetch(__prim_object, isect->prim): isect->object;
 #endif
-	sd->lamp = LAMP_NONE;
+		sd->lamp = LAMP_NONE;
 
-	sd->type = isect->type;
-	sd->flag = 0;
-	sd->object_flag = kernel_tex_fetch(__object_flag,
-	                                              sd->object);
+		sd->type = isect->type;
+		sd->flag = 0;
+		sd->object_flag = kernel_tex_fetch(__object_flag, sd->object);
 
-	/* matrices and time */
+		/* matrices and time */
 #ifdef __OBJECT_MOTION__
-	shader_setup_object_transforms(kg, sd, ray->time);
-	sd->time = ray->time;
+		shader_setup_object_transforms(kg, sd, ray->time);
+		sd->time = ray->time;
 #endif
 
-	sd->prim = kernel_tex_fetch(__prim_index, isect->prim);
-	sd->ray_length = isect->t;
+		sd->prim = kernel_tex_fetch(__prim_index, isect->prim);
+		sd->ray_length = isect->t;
 
 #ifdef __UV__
-	sd->u = isect->u;
-	sd->v = isect->v;
+		sd->u = isect->u;
+		sd->v = isect->v;
 #endif
 
 #ifdef __HAIR__
-	if(sd->type & PRIMITIVE_ALL_CURVE) {
-		/* curve */
-		float4 curvedata = kernel_tex_fetch(__curves, sd->prim);
+		if(sd->type & PRIMITIVE_ALL_CURVE) {
+			/* curve */
+			float4 curvedata = kernel_tex_fetch(__curves, sd->prim);
 
-		sd->shader = __float_as_int(curvedata.z);
-		sd->P = bvh_curve_refine(kg, sd, isect, ray);
-	}
-	else
+			sd->shader = __float_as_int(curvedata.z);
+			sd->P = bvh_curve_refine(kg, sd, isect, ray);
+		}
+		else
 #endif
-	if(sd->type & PRIMITIVE_TRIANGLE) {
-		/* static triangle */
-		float3 Ng = triangle_normal(kg, sd);
-		sd->shader = kernel_tex_fetch(__tri_shader, sd->prim);
+		if(sd->type & PRIMITIVE_TRIANGLE) {
+			/* static triangle */
+			float3 Ng = triangle_normal(kg, sd);
+			sd->shader = kernel_tex_fetch(__tri_shader, sd->prim);
 
-		/* vectors */
-		sd->P = triangle_refine(kg, sd, isect, ray);
-		sd->Ng = Ng;
-		sd->N = Ng;
-		
-		/* smooth normal */
-		if(sd->shader & SHADER_SMOOTH_NORMAL)
-			sd->N = triangle_smooth_normal(kg, Ng, sd->prim, sd->u, sd->v);
+			/* vectors */
+			sd->P = triangle_refine(kg, sd, isect, ray);
+			sd->Ng = Ng;
+			sd->N = Ng;
+			/* smooth normal */
+			if(sd->shader & SHADER_SMOOTH_NORMAL)
+				sd->N = triangle_smooth_normal(kg, Ng, sd->prim, sd->u, sd->v);
 
 #ifdef __DPDU__
-		/* dPdu/dPdv */
-		triangle_dPdudv(kg, sd->prim, &sd->dPdu, &sd->dPdv);
+			/* dPdu/dPdv */
+			triangle_dPdudv(kg, sd->prim, &sd->dPdu, &sd->dPdv);
 #endif
-	}
-	else {
-		/* motion triangle */
-		motion_triangle_shader_setup(kg, sd, isect, ray, false);
-	}
+		}
+		else {
+			/* motion triangle */
+			motion_triangle_shader_setup(kg, sd, isect, ray, false);
+		}
 
-	sd->I = -ray->D;
+		sd->I = -ray->D;
 
-	sd->flag |= kernel_tex_fetch(__shader_flag, (sd->shader & SHADER_MASK)*SHADER_SIZE);
+		sd->flag |= kernel_tex_fetch(__shader_flag, (sd->shader & SHADER_MASK)*SHADER_SIZE);
+		if (isect->entry_prim == GEOPATTERN_NO_LINK) {
+            #ifdef __INSTANCING__
+                        if (isect->object != OBJECT_NONE) {
+                            /* instance transform */
+                            object_normal_transform_auto(kg, sd, &sd->N);
+                            object_normal_transform_auto(kg, sd, &sd->Ng);
+            #  ifdef __DPDU__
+                            object_dir_transform_auto(kg, sd, &sd->dPdu);
+                            object_dir_transform_auto(kg, sd, &sd->dPdv);
+            #  endif
+                        }
+            #endif
+        } else if (isect->object != OBJECT_NONE && isect->entry_object != GEOPATTERN_NO_LINK) {
+			const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, isect->entry_prim);
+			const float3 v0 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+0));
+			const float3 v1 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+1));
+			const float3 v2 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+2));
+//
+//
+		    Mat3 TT = transpose(inverse(isect->T));
+//		    //dump_matrix(isect->T);
+			float3 Ng = normalize(TT * sd->Ng);
+			float3 N = normalize(TT * sd->N);
+            float3 dPdu = (isect->T * sd->dPdu);
+            float3 dPdv = (isect->T * sd->dPdv);
+//
+//
+			//sd->N = normalize(TT * sd->N);
+            //normalize(float4_to_float3(TT * make_float4(sd->N.x, sd->N.y, sd->N.z, 0)));
 
-#ifdef __INSTANCING__
-	if(isect->object != OBJECT_NONE) {
-		/* instance transform */
-		object_normal_transform_auto(kg, sd, &sd->N);
-		object_normal_transform_auto(kg, sd, &sd->Ng);
-#  ifdef __DPDU__
-		object_dir_transform_auto(kg, sd, &sd->dPdu);
-		object_dir_transform_auto(kg, sd, &sd->dPdv);
-#  endif
-	}
-#endif
+//
+//            int object_flag = kernel_tex_fetch(__object_flag, isect->entry_object);
+//            if(object_flag & SD_OBJECT_NEGATIVE_SCALE_APPLIED) {
+//                sd->Ng = normalize(cross(v2 - v0, v1 - v0));
+//            } else {
+//                sd->Ng = normalize(cross(v1 - v0, v2 - v0));
+//            }
+//////
+//////            //sd->Ng = normalize(cross(v2 - v0, v1 - v0));
+//			sd->N = triangle_smooth_normal(kg, sd->Ng, isect->entry_prim, sd->u, sd->v);
+//            triangle_dPdudv(kg, isect->entry_prim, &sd->dPdu, &sd->dPdv);
+//
+//			sd->object = isect->entry_object;
+//			object_normal_transform_auto(kg, sd, &sd->N);
+//			object_normal_transform_auto(kg, sd, &sd->Ng);
+//			object_dir_transform_auto(kg, sd, &sd->dPdu);
+//			object_dir_transform_auto(kg, sd, &sd->dPdv);
+//			sd->object = isect->object;
+////
 
-	/* backfacing test */
-	bool backfacing = (dot(sd->Ng, sd->I) < 0.0f);
+//			const_cast<Intersection *>(isect)->object = isect->entry_object;
+//			printf("%f %f %f | %f %f %f norm diff %f %f %f %f\n",
+//			        (double)sd->N.x,  (double)sd->N.y, (double)sd->N.z,
+//			        (double)N.x, (double)N.y, (double)N.z,
+//			        (double)len(sd->Ng - Ng),
+//			        (double)len(sd->N - N),
+//                    (double)len(sd->dPdu - dPdu),
+//                    (double)len(sd->dPdv - dPdv));
 
-	if(backfacing) {
-		sd->flag |= SD_BACKFACING;
-		sd->Ng = -sd->Ng;
-		sd->N = -sd->N;
+			sd->N = N;
+			sd->Ng = Ng;
+			sd->dPdu = dPdu;
+			sd->dPdv = dPdv;
+            //sd->dPdu = (float4_to_float3(isect->T * make_float4(sd->dPdu.x, sd->dPdu.y, sd->dPdu.z, 0)));
+			//sd->dPdv = (float4_to_float3(isect->T * make_float4(sd->dPdv.x, sd->dPdv.y, sd->dPdv.z, 0)));
+			//triangle_dPdudv(kg, isect->entry_prim, &sd->dPdu, &sd->dPdv);
+//            const float4 geopattern_settings = kernel_tex_fetch(__object_geopattern, isect->entry_object);
+//
+//            int node_addr = kernel_tex_fetch(__object_node, isect->object);
+//            assert(node_addr >= 0);
+//            float4 xx = kernel_tex_fetch(__bvh_nodes, node_addr + 1);
+//            float4 yy = kernel_tex_fetch(__bvh_nodes, node_addr + 2);
+//            float4 zz = kernel_tex_fetch(__bvh_nodes, node_addr + 3);
+//
+//            float3 bbox_min = make_float3(
+//                    min4(xx.x, xx.y, xx.z, xx.w),
+//                    min4(yy.x, yy.y, yy.z, yy.w),
+//                    min4(zz.x, zz.y, zz.z, zz.w)
+//            );
+//
+//            float3 bbox_max = make_float3(
+//                    max4(xx.x, xx.y, xx.z, xx.w),
+//                    max4(yy.x, yy.y, yy.z, yy.w),
+//                    max4(zz.x, zz.y, zz.z, zz.w)
+//            );
+//
+//            const uint geopattern_link = __float_as_uint(geopattern_settings.x);
+//            const uint geopattern_clipbox_link = __float_as_uint(geopattern_settings.y);
+//            const float geopatten_height = geopattern_settings.z;
+//
+//            const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, isect->entry_prim);
+//            const float3 tri_a = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 0));
+//            const float3 tri_b = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 1));
+//            const float3 tri_c = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 2));
+//
+//            float3 tri_n_a = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.x));
+//            float3 tri_n_b = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.y));
+//            float3 tri_n_c = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.z));
+//            const float2 tri_a_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 0);
+//            const float2 tri_b_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 1);
+//            const float2 tri_c_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 2);
+//
+//            object_normal_transform(kg, isect->entry_object, &tri_n_a);
+//            object_normal_transform(kg, isect->entry_object, &tri_n_b);
+//            object_normal_transform(kg, isect->entry_object, &tri_n_c);
+//
+//            tri_n_a *= geopatten_height;
+//            tri_n_b *= geopatten_height;
+//            tri_n_c *= geopatten_height;
+
+//            const uint4 tri_uv_vindex = kernel_tex_fetch(__tri_vindex, sd->prim);
+//            float3 tri_uv_a = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_uv_vindex.w + 0));
+//            float3 tri_uv_b = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_uv_vindex.w + 1));
+//            float3 tri_uv_c = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_uv_vindex.w + 2));
+//            float3 tri_uv_n_a = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_uv_vindex.x));
+//            float3 tri_uv_n_b = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_uv_vindex.y));
+//            float3 tri_uv_n_c = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_uv_vindex.z));
+//
+//            float3 N = triangle_normal(tri_uv_a, tri_uv_b, tri_uv_c);
+//            float3 Ng = safe_normalize((1.0f - isect->u - isect->v)*tri_uv_n_c + isect->u*tri_uv_n_a + isect->v*tri_uv_n_b);
+//            Ng = is_zero(Ng)? N: Ng;
+//
+//			Mat mat;
+//
+//            mat[0][0] = tri_uv_b.x - tri_uv_a.x;
+//            mat[1][0] = tri_uv_b.y - tri_uv_a.y;
+//			mat[2][0] = tri_uv_b.z - tri_uv_a.z;
+//			mat[3][0] = 0;
+//
+//			mat[0][1] = tri_uv_c.x - tri_uv_a.x;
+//			mat[1][1] = tri_uv_c.y - tri_uv_a.y;
+//			mat[2][1] = tri_uv_c.z - tri_uv_a.z;
+//			mat[3][1] = 0;
+//
+//			mat[0][2] = N.x;
+//			mat[1][2] = N.y;
+//			mat[2][2] = N.z;
+//			mat[3][2] = 0;
+//
+//			mat[0][3] = 0;
+//			mat[1][3] = 0;
+//			mat[2][3] = 0;
+//			mat[3][3] = 1;
+//
+//			Mat mat_inv_t = mat.inverse().transpose();
+//
+//			N = float4_to_float3(mat_inv_t * float3_to_float4(N));
+//			Ng = float4_to_float3(mat_inv_t * float3_to_float4(Ng));
+//
+//			Mat
+//
+//            float inv_x_len = 1.0f / (bbox_max.x - bbox_min.x);
+//            float inv_y_len = 1.0f / (bbox_max.y - bbox_min.y);
+//            float inv_z_len = 1.0f / (bbox_max.z - bbox_min.z);
+//            tri_uv_a = tri_uv_a - bbox_min;
+//            tri_uv_b = tri_uv_b - bbox_min;
+//            tri_uv_c = tri_uv_c - bbox_min;
+//
+//
+//            float3 A_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_a_uv.x),
+//                                      device_lerp(bbox_min.y, bbox_max.y, tri_a_uv.y),
+//                                      device_lerp(bbox_min.z, bbox_max.z, min_hit.w));
+//
+//            float3 B_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_b_uv.x),
+//                                      device_lerp(bbox_min.y, bbox_max.y, tri_b_uv.y),
+//                                      device_lerp(bbox_min.z, bbox_max.z, min_hit.w));
+//
+//            float3 C_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_c_uv.x),
+//                                      device_lerp(bbox_min.y, bbox_max.y, tri_c_uv.y),
+//                                      device_lerp(bbox_min.z, bbox_max.z, min_hit.w));
+//
+//            float3 A2_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_a_uv.x),
+//                                       device_lerp(bbox_min.y, bbox_max.y, tri_a_uv.y),
+//                                       device_lerp(bbox_min.z, bbox_max.z, max_hit.w));
+//
+//            float3 B2_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_b_uv.x),
+//                                       device_lerp(bbox_min.y, bbox_max.y, tri_b_uv.y),
+//                                       device_lerp(bbox_min.z, bbox_max.z, max_hit.w));
+//
+//            float3 C2_uv = make_float3(device_lerp(bbox_min.x, bbox_max.x, tri_c_uv.x),
+//                                       device_lerp(bbox_min.y, bbox_max.y, tri_c_uv.y),
+//                                       device_lerp(bbox_min.z, bbox_max.z, max_hit.w));
+//
+//            float3 a_uvw = make_float3(tri_uv_a.x * inv_x_len, tri_uv_a.y * inv_y_len, tri_uv_a.z * inv_z_len);
+//            float3 b_uvw = make_float3(tri_uv_b.x * inv_x_len, tri_uv_b.y * inv_y_len, tri_uv_b.z * inv_z_len);
+//            float3 c_uvw = make_float3(tri_uv_c.x * inv_x_len, tri_uv_c.y * inv_y_len, tri_uv_c.z * inv_z_len);
+//
+//            float3 A = interpolatePoint(tri_a, tri_b, tri_c, tri_n_a, tri_n_b, tri_c, a_uvw.x, a_uvw.y, a_uvw.z);
+//            float3 B = interpolatePoint(tri_a, tri_b, tri_c, tri_n_a, tri_n_b, tri_c, b_uvw.x, b_uvw.y, b_uvw.z);
+//            float3 C = interpolatePoint(tri_a, tri_b, tri_c, tri_n_a, tri_n_b, tri_c, c_uvw.x, c_uvw.y, c_uvw.z);
+
+            //sd->N = make_float3(0, 0, 1.0);
+            //sd->Ng = make_float3(0, 0, 1.0);
+        }
+
+		/* backfacing test */
+		bool backfacing = (dot(sd->Ng, sd->I) < 0.0f);
+
+		if(backfacing) {
+			sd->flag |= SD_BACKFACING;
+			sd->Ng = -sd->Ng;
+			sd->N = -sd->N;
 #ifdef __DPDU__
-		sd->dPdu = -sd->dPdu;
-		sd->dPdv = -sd->dPdv;
+			sd->dPdu = -sd->dPdu;
+			sd->dPdv = -sd->dPdv;
 #endif
-	}
+		}
 
 #ifdef __RAY_DIFFERENTIALS__
-	/* differentials */
-	differential_transfer(&sd->dP, ray->dP, ray->D, ray->dD, sd->Ng, isect->t);
-	differential_incoming(&sd->dI, ray->dD);
-	differential_dudv(&sd->du, &sd->dv, sd->dPdu, sd->dPdv, sd->dP, sd->Ng);
+		/* differentials */
+		differential_transfer(&sd->dP, ray->dP, ray->D, ray->dD, sd->Ng, isect->t);
+		differential_incoming(&sd->dI, ray->dD);
+		differential_dudv(&sd->du, &sd->dv, sd->dPdu, sd->dPdv, sd->dP, sd->Ng);
 #endif
 }
 
@@ -249,6 +435,8 @@ ccl_device_inline void shader_setup_from_sample(KernelGlobals *kg,
                                                 bool object_space,
                                                 int lamp)
 {
+
+	printf("shader_setup_from_sample\n");
 	/* vectors */
 	sd->P = P;
 	sd->N = Ng;
@@ -300,6 +488,8 @@ ccl_device_inline void shader_setup_from_sample(KernelGlobals *kg,
 		object_dir_transform_auto(kg, sd, &sd->I);
 	}
 
+	printf("%d ", object_space);
+
 	if(sd->type & PRIMITIVE_TRIANGLE) {
 		/* smooth normal */
 		if(sd->shader & SHADER_SMOOTH_NORMAL) {
@@ -307,6 +497,7 @@ ccl_device_inline void shader_setup_from_sample(KernelGlobals *kg,
 
 #ifdef __INSTANCING__
 			if(!(sd->object_flag & SD_OBJECT_TRANSFORM_APPLIED)) {
+				printf("object_normal_transform_auto\n");
 				object_normal_transform_auto(kg, sd, &sd->N);
 			}
 #endif
@@ -394,6 +585,7 @@ ccl_device_inline void shader_setup_from_background(KernelGlobals *kg, ShaderDat
 	sd->ray_length = 0.0f;
 
 #ifdef __INSTANCING__
+	//FIXME: CYCLES_ERROR?
 	sd->object = PRIM_NONE;
 #endif
 	sd->lamp = LAMP_NONE;

@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../lib/libbf_avi.a  CMakeFiles/bf_avi.dir/intern/avi.c.o CMakeFiles/bf_avi.dir/intern/avi_rgb.c.o CMakeFiles/bf_avi.dir/intern/avi_codecs.c.o CMakeFiles/bf_avi.dir/intern/avi_endian.c.o CMakeFiles/bf_avi.dir/intern/avi_mjpeg.c.o CMakeFiles/bf_avi.dir/intern/avi_options.c.o CMakeFiles/bf_avi.dir/intern/avi_rgb32.c.o
+/usr/bin/ranlib ../../../lib/libbf_avi.a

@@ -74,7 +74,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 	int  entry_prim = GEOPATTERN_NO_LINK;
 	int  entry_obj = GEOPATTERN_NO_LINK;
 	float isect_t = tmax;
-	float t_lim = tmax;
+    float t_far = FLT_MAX;
+    float t_near = -FLT_MAX;
 #if BVH_FEATURE(BVH_MOTION)
 	Transform ob_itfm;
 #endif
@@ -108,7 +109,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 				                               node_addr,
 				                               PATH_RAY_SHADOW,
 				                               dist,
-											   t_lim);
+                                               t_near,
+                                               t_far);
 
 				node_addr = __float_as_int(cnodes.z);
 				node_addr_child1 = __float_as_int(cnodes.w);
@@ -191,7 +193,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 															 PATH_RAY_SHADOW,
 															 object,
 															 prim_addr,
-															 t_lim);
+                                                             t_near,
+                                                             t_far);
 
 									if (hit) {
 										isect_array->entry_object = entry_obj;
@@ -200,344 +203,20 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 									}
 
 								} else {
-									const int prim = kernel_tex_fetch(__prim_index, prim_addr);
-									const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
-                                    int object_flag = kernel_tex_fetch(__object_flag, object_idx);
+									if (common_part_geopattern_inside(prim_addr, object_idx, geopattern_link, geopattern_clipbox_link, geopatten_height,
+																	  P, dir, idir, isect_array->t,
+																	  stack_ptr,traversal_stack, node_addr, object,
+																	  geoframe, T, t_near, t_far)) {
+										const int prim = kernel_tex_fetch(__prim_index, prim_addr);
+										entry_prim = prim;
+										entry_obj = object;
 
-									const float3 tri_a = float4_to_float3(
-											kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 0));
-									const float3 tri_b = float4_to_float3(
-											kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 1));
-									const float3 tri_c = float4_to_float3(
-											kernel_tex_fetch(__prim_tri_verts, tri_vindex.w + 2));
-
-									float3 tri_n_a = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.x));
-									float3 tri_n_b = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.y));
-									float3 tri_n_c = float4_to_float3(kernel_tex_fetch(__tri_vnormal, tri_vindex.z));
-
-									tri_n_a *= geopatten_height;
-									tri_n_b *= geopatten_height;
-									tri_n_c *= geopatten_height;
-
-									HitData min_hit, max_hit;
-									min_hit.hit = false;
-									min_hit.t = FLT_MAX;
-
-									max_hit.hit = false;
-									max_hit.t = -FLT_MAX;
-									float u, v, t;
-
-                                    bool d1 =       (sdistance_to_plane(tri_a,           tri_b,           tri_c          , object_flag, P) > 0.0f);
-                                    bool d2 = d1 && (sdistance_to_plane(tri_a + tri_n_a, tri_b + tri_n_b, tri_c + tri_n_c, object_flag, P) < 0.0f);
-
-                                    bool d3 = d2 && (sdistance_to_plane(tri_a,           tri_b,           tri_a + tri_n_a, object_flag, P) < 0.0f);
-                                    bool d4 = d3 && (sdistance_to_plane(tri_a + tri_n_a, tri_b          , tri_b + tri_n_b, object_flag, P) < 0.0f);
-
-                                    bool d5 = d4 && (sdistance_to_plane(tri_b,           tri_c,           tri_b + tri_n_b, object_flag, P) < 0.0f);
-                                    bool d6 = d5 && (sdistance_to_plane(tri_b + tri_n_b, tri_c          , tri_c + tri_n_c, object_flag, P) < 0.0f);
-
-                                    bool d7 = d6 && (sdistance_to_plane(tri_c,           tri_a,           tri_c + tri_n_c, object_flag, P) < 0.0f);
-                                    bool d8 = d7 && (sdistance_to_plane(tri_c + tri_n_c, tri_a          , tri_a + tri_n_a, object_flag, P) < 0.0f);
-
-                                    if (d8) {
-                                        min_hit.hit = true;
-                                        min_hit.t = 0;
-                                        min_hit.isUVWSet = false;
-                                        min_hit.p = P;
-                                    }
-
-
-                                    if (ray_triangle_intersect(P,
-                                                               dir,
-                                                               FLT_MAX,
-                                                               tri_a + tri_n_a,
-                                                               tri_b + tri_n_b,
-                                                               tri_c + tri_n_c,
-                                                               &u, &v, &t)) {
-                                        handle_hit(min_hit, max_hit, P, dir, t, u, v, tri_a + tri_n_a, tri_b + tri_n_b, tri_c + tri_n_c);
-                                    }
-
-                                    if (ray_triangle_intersect(P,
-                                                               dir,
-                                                               FLT_MAX,
-                                                               tri_a,
-                                                               tri_b,
-                                                               tri_c,
-                                                               &u, &v, &t)) {
-                                        handle_hit(min_hit, max_hit, P, dir, t, u, v, tri_a, tri_b, tri_c);
-                                    }
-
-
-                                    // side a, b
-                                    {
-                                        {
-                                            float3 a = tri_a;
-                                            float3 b = tri_b;
-                                            float3 c = tri_a + tri_n_a;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-
-                                        {
-                                            float3 a = tri_a + tri_n_a;
-                                            float3 b = tri_b;
-                                            float3 c = tri_b + tri_n_b;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-                                    }
-
-                                    // side b, c
-                                    {
-                                        {
-                                            float3 a = tri_b;
-                                            float3 b = tri_c;
-                                            float3 c = tri_b + tri_n_b;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-                                        {
-                                            float3 a = tri_b + tri_n_b;
-                                            float3 b = tri_c;
-                                            float3 c = tri_c + tri_n_c;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-                                    }
-                                    // side c, a
-                                    {
-                                        {
-                                            float3 a = tri_c;
-                                            float3 b = tri_a;
-                                            float3 c = tri_c + tri_n_c;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-                                        {
-                                            float3 a = tri_c + tri_n_c;
-                                            float3 b = tri_a;
-                                            float3 c = tri_a + tri_n_a;
-                                            if (ray_triangle_intersect(P,
-                                                                       dir,
-                                                                       FLT_MAX,
-                                                                       a,
-                                                                       b,
-                                                                       c,
-                                                                       &u, &v, &t)) {
-                                                handle_hit(min_hit, max_hit, P, dir, t, u, v, a, b, c);
-                                            }
-                                        }
-                                    }
-
-                                    if (min_hit.hit && max_hit.hit && (isect_array->t > min_hit.t) && (min_hit.t < max_hit.t)) {
-                                        if (!min_hit.isUVWSet) {
-                                            min_hit.isUVWSet = true;
-                                            float3 point = min_hit.p;
-                                            float3 uvw = prism_point_uvw_coords(tri_a, tri_b, tri_c, tri_n_a, tri_n_b, tri_n_c, object_flag,
-                                                                                point, EPS);
-                                            min_hit.u = uvw.x;
-                                            min_hit.v = uvw.y;
-                                            min_hit.w = uvw.z;
-                                        }
-
-                                        if (!max_hit.isUVWSet) {
-                                            max_hit.isUVWSet = true;
-                                            float3 point = max_hit.p;
-                                            float3 uvw = prism_point_uvw_coords(tri_a, tri_b, tri_c, tri_n_a, tri_n_b, tri_n_c, object_flag,
-                                                                                point, EPS);
-                                            max_hit.u = uvw.x;
-                                            max_hit.v = uvw.y;
-                                            max_hit.w = uvw.z;
-                                        }
-
-										++stack_ptr;
-										assert(stack_ptr < BVH_STACK_SIZE);
-										traversal_stack[stack_ptr] = node_addr;
-
-										++stack_ptr;
-										assert(stack_ptr < BVH_STACK_SIZE);
-										traversal_stack[stack_ptr] = object;
-
-										++stack_ptr;
-										assert(stack_ptr < BVH_STACK_SIZE);
-										traversal_stack[stack_ptr] = GEOPATTERN_SENTINEL;
-
-										++stack_ptr;
-										assert(stack_ptr < BVH_STACK_SIZE);
-										traversal_stack[stack_ptr] = ENTRYPOINT_SENTINEL;
-
-										object = geopattern_link;
-
-										node_addr = kernel_tex_fetch(__object_node, object);
-										assert(node_addr >= 0);
-										float4 xx = kernel_tex_fetch(__bvh_nodes, node_addr + 1);
-										float4 yy = kernel_tex_fetch(__bvh_nodes, node_addr + 2);
-										float4 zz = kernel_tex_fetch(__bvh_nodes, node_addr + 3);
-
-										float3 bbox_min = {
-												fmin(xx.x, xx.y),
-												fmin(yy.x, yy.y),
-												fmin(zz.x, zz.y)
-										};
-
-										float3 bbox_max = {
-												fmax(xx.z, xx.w),
-												fmax(yy.z, yy.w),
-												fmax(zz.z, zz.w)
-										};
-
-
-										/*float2 start_uv =
-												(1.0f - min_hit.u - min_hit.v) * tri_c_uv + min_hit.u * tri_a_uv + min_hit.v * tri_b_uv;
-										float2 end_uv =
-												(1.0f - max_hit.u - max_hit.v) * tri_c_uv + max_hit.u * tri_a_uv + max_hit.v * tri_b_uv;
-
-										float3 uvw_origin = make_float3(start_uv.x, start_uv.y, min_hit.w);
-										float3 uvw_end = make_float3(end_uv.x, end_uv.y, max_hit.w);
-
-
-										float3 start_texture = make_float3(
-												device_lerp(bbox_min.x, bbox_max.x, uvw_origin.x),
-												device_lerp(bbox_min.y, bbox_max.y, uvw_origin.y),
-												device_lerp(bbox_min.z, bbox_max.z, uvw_origin.z));
-										float3 end_texture = make_float3(device_lerp(bbox_min.x, bbox_max.x, uvw_end.x),
-																		 device_lerp(bbox_min.y, bbox_max.y, uvw_end.y),
-																		 device_lerp(bbox_min.z, bbox_max.z,
-																					 uvw_end.z));*/
-
-										const float2 tri_a_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 0);
-										const float2 tri_b_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 1);
-										const float2 tri_c_uv = kernel_tex_fetch(__prim_tri_uv_geopattern, tri_vindex.w + 2);
-
-                                        float3 A_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_a_uv.x),
-                                                                  device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_a_uv.y),
-                                                                  device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, min_hit.w));
-
-                                        float3 B_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_b_uv.x),
-                                                                  device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_b_uv.y),
-                                                                  device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, min_hit.w));
-
-                                        float3 C_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_c_uv.x),
-                                                                  device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_c_uv.y),
-                                                                  device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, min_hit.w));
-
-                                        float3 A2_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_a_uv.x),
-                                                                   device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_a_uv.y),
-                                                                   device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, max_hit.w));
-
-                                        float3 B2_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_b_uv.x),
-                                                                   device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_b_uv.y),
-                                                                   device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, max_hit.w));
-
-                                        float3 C2_uv = make_float3(device_lerp(bbox_min.x + shift_eps, bbox_max.x - shift_eps, tri_c_uv.x),
-                                                                   device_lerp(bbox_min.y + shift_eps, bbox_max.y - shift_eps, tri_c_uv.y),
-                                                                   device_lerp(bbox_min.z - shift_eps, bbox_max.z + shift_eps, max_hit.w));
-
-                                        Mat3 Q;
-                                        Mat3 QQ;
-
-                                        if (object_flag & D_SD_OBJECT_NEGATIVE_SCALE_APPLIED) {
-                                            Q[0][0] = (tri_c - tri_a).x;
-                                            Q[1][0] = (tri_c - tri_a).y;
-                                            Q[2][0] = (tri_c - tri_a).z;
-
-                                            Q[0][1] = (tri_b - tri_a).x;
-                                            Q[1][1] = (tri_b - tri_a).y;
-                                            Q[2][1] = (tri_b - tri_a).z;
-
-                                        } else {
-                                            Q[0][0] = (tri_b - tri_a).x;
-                                            Q[1][0] = (tri_b - tri_a).y;
-                                            Q[2][0] = (tri_b - tri_a).z;
-
-                                            Q[0][1] = (tri_c - tri_a).x;
-                                            Q[1][1] = (tri_c - tri_a).y;
-                                            Q[2][1] = (tri_c - tri_a).z;
-                                        }
-
-                                        float3 Ng = geopatten_height * triangle_normal(tri_a, tri_b, tri_c, object_flag);
-
-                                        Q[0][2] = Ng.x;
-                                        Q[1][2] = Ng.y;
-                                        Q[2][2] = Ng.z;
-                                        QQ[0][0] = (B_uv - A_uv).x;
-                                        QQ[1][0] = (B_uv - A_uv).y;
-                                        QQ[2][0] = (B_uv - A_uv).z;
-
-                                        QQ[0][1] = (C_uv - A_uv).x;
-                                        QQ[1][1] = (C_uv - A_uv).y;
-                                        QQ[2][1] = (C_uv - A_uv).z;
-
-                                        float3 N = triangle_normal(A_uv, B_uv, C_uv, 0);
-                                        if ((bbox_max.z - bbox_min.z + 2 * shift_eps) > 1.0) {
-                                            N *= (bbox_max.z - bbox_min.z + 2 * shift_eps);
-                                        }
-
-                                        QQ[0][2] = N.x;
-                                        QQ[1][2] = N.y;
-                                        QQ[2][2] = N.z;
-
-                                        T = Q * inverse(QQ);
-
-										float3 start_texture  = (1.0f - min_hit.u - min_hit.v) * C_uv  + min_hit.u * A_uv  + min_hit.v * B_uv;
-										float3 end_texture    = (1.0f - max_hit.u - max_hit.v) * C2_uv + max_hit.u * A2_uv + max_hit.v * B2_uv;
-																				geoframe.t_lim = t_lim;
-										float len_texture = len(end_texture - start_texture);
-
-                                        float len_world = len(max_hit.p - min_hit.p);
-                                        float mult = (len_texture / len_world);
-                                        if (isect_t != FLT_MAX) {
-											isect_t = (isect_t - min_hit.t) * mult;
-                                        }
-                                        geoframe.min_t = min_hit.t;
-                                        geoframe.mult_t = mult;
-
-										t_lim = len_texture;
-										geoframe.dir = dir;
-										geoframe.P = P;
-										dir = bvh_clamp_direction(normalize(end_texture - start_texture));
-										idir = bvh_inverse_direction(dir);
-										P = start_texture;
+										if (isect_t != FLT_MAX) {
+											isect_t = (isect_t - geoframe.min_t) * geoframe.mult_t + offset_t;
+										}
 
 										num_hits_in_geopattern = 0;
 										isect_array->t = isect_t;
-										entry_obj = object_idx;
-										entry_prim = prim;
 									}
 								}
 								break;
@@ -552,7 +231,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 								                                PATH_RAY_SHADOW,
 								                                object,
 								                                prim_addr,
-								                                t_lim);
+								                                t_near,
+								                                t_far);
 								break;
 							}
 #endif
@@ -572,7 +252,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 									                                   curve_type,
 									                                   NULL,
 									                                   0, 0,
-									                                   t_lim);
+									                                   t_near,
+								                                       t_far);
 								}
 								else {
 									hit = bvh_curve_intersect(kg,
@@ -586,7 +267,8 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 									                          curve_type,
 									                          NULL,
 									                          0, 0,
-									                          t_lim);
+									                          t_near,
+									                          t_far);
 								}
 								break;
 							}
@@ -685,19 +367,21 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 			if (sentinel == GEOPATTERN_SENTINEL) {
 				if(num_hits_in_geopattern) {
 					for(int i = 0; i < num_hits_in_geopattern; i++) {
-						(isect_array-i-1)->t /= geoframe.mult_t;
-						(isect_array-i-1)->t += geoframe.min_t;
+						(isect_array-i-1)->t = ((isect_array-i-1)->t - offset_t) / geoframe.mult_t + geoframe.min_t;
 					}
 				}
-				P = geoframe.P;
-				dir = geoframe.dir;
-				idir = bvh_inverse_direction(dir);
-				t_lim = geoframe.t_lim;
+                P = geoframe.P;
+                dir = geoframe.dir;
+                idir = bvh_inverse_direction(dir);
+                t_far = geoframe.t_far;
+                t_near = geoframe.t_near;
+
 				isect_t = tmax;
 				isect_array->t = isect_t;
 
 				entry_obj = GEOPATTERN_NO_LINK;
 				entry_prim = GEOPATTERN_NO_LINK;
+				num_hits_in_geopattern = 0;
 			}
 #if BVH_FEATURE(BVH_INSTANCING)
 			if (sentinel == INSTANCE_SENTINEL) {

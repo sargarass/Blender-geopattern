@@ -83,7 +83,7 @@ static inline BL::Mesh object_to_mesh(BL::BlendData& data,
 			}
 		}
 		if(subdivision_type == Mesh::SUBDIVISION_NONE) {
-			me.calc_tessface(true);
+			me.calc_tessface(false);
 		}
 	}
 	return me;

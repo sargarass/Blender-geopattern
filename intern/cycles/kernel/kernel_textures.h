@@ -26,12 +26,15 @@
 KERNEL_TEX(float4, texture_float4, __bvh_nodes)
 KERNEL_TEX(float4, texture_float4, __bvh_leaf_nodes)
 KERNEL_TEX(float4, texture_float4, __prim_tri_verts)
+KERNEL_TEX(float2, texture_float2, __prim_tri_uv_geopattern)
 KERNEL_TEX(uint, texture_uint, __prim_tri_index)
 KERNEL_TEX(uint, texture_uint, __prim_type)
 KERNEL_TEX(uint, texture_uint, __prim_visibility)
 KERNEL_TEX(uint, texture_uint, __prim_index)
 KERNEL_TEX(uint, texture_uint, __prim_object)
 KERNEL_TEX(uint, texture_uint, __object_node)
+KERNEL_TEX(float4, texture_float4, __object_geopattern)
+KERNEL_TEX(float4, texture_float4, __geopattern_clipbox)
 KERNEL_TEX(float2, texture_float2, __prim_time)
 
 /* objects */

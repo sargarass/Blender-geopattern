@@ -169,6 +169,14 @@ public:
 		int num_ptex_faces() const { return num_corners == 4 ? 1 : num_corners; }
 	};
 
+	struct Geopattern {
+	    bool used_as_pattern = false;
+        ustring link;
+        uint olink = GEOPATTERN_NO_LINK;
+		float normal_height = 1.0f;
+		BoundBox settings { make_float3(0.0), make_float3(1.0) };
+	};
+
 	struct SubdEdgeCrease {
 		int v[2];
 		float crease;
@@ -195,6 +203,8 @@ public:
 	array<float3> verts;
 	array<int> shader;
 	array<bool> smooth;
+
+	Geopattern geopattern_settings;
 
 	/* used for storing patch info for subd triangles, only allocated if there are patches */
 	array<int> triangle_patch; /* must be < 0 for non subd triangles */

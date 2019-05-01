@@ -1,0 +1,3 @@
+file(REMOVE_RECURSE
+  "../../../lib/libge_logic_expressions.a"
+)

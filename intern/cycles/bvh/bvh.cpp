@@ -109,8 +109,7 @@ void BVH::refit(Progress& progress)
 }
 
 /* Triangles */
-
-void BVH::pack_triangle(int idx, float4 tri_verts[3])
+void BVH::pack_triangle(int idx, float4 tri_verts[3], float2 geopattern_uv[2])
 {
 	int tob = pack.prim_object[idx];
 	assert(tob >= 0 && tob < objects.size());
@@ -126,6 +125,24 @@ void BVH::pack_triangle(int idx, float4 tri_verts[3])
 	tri_verts[0] = float3_to_float4(v0);
 	tri_verts[1] = float3_to_float4(v1);
 	tri_verts[2] = float3_to_float4(v2);
+
+	auto attr = mesh->attributes.find(ustring{"Geopattern_uv"});
+	if (attr) {
+		fprintf(stderr, "Geopattern_uv!\n");
+		float3 *tex = attr->data_float3();
+		geopattern_uv[0] = make_float2(tex[3 * tidx + 0].x, tex[3 * tidx + 0].y);
+		geopattern_uv[1] = make_float2(tex[3 * tidx + 1].x, tex[3 * tidx + 1].y);
+		geopattern_uv[2] = make_float2(tex[3 * tidx + 2].x, tex[3 * tidx + 2].y);
+
+		printf("%f %f %f | %f %f\n", (double)tri_verts[0].x, (double)tri_verts[0].y,(double) tri_verts[0].z,(double) geopattern_uv[0].x, (double)geopattern_uv[0].y);
+		printf("%f %f %f | %f %f\n", (double)tri_verts[1].x, (double)tri_verts[1].y, (double)tri_verts[1].z,(double) geopattern_uv[1].x,(double) geopattern_uv[1].y);
+		printf("%f %f %f | %f %f\n", (double)tri_verts[2].x, (double)tri_verts[2].y,(double) tri_verts[2].z, (double)geopattern_uv[2].x,(double) geopattern_uv[2].y);
+
+	} else {
+		geopattern_uv[0] = make_float2(0.0f, 0.0f);
+		geopattern_uv[1] = make_float2(1.0f, 0.0f);
+		geopattern_uv[2] = make_float2(1.0f, 1.0f);
+	}
 }
 
 void BVH::pack_primitives()
@@ -143,8 +160,12 @@ void BVH::pack_primitives()
 	/* Reserve size for arrays. */
 	pack.prim_tri_index.clear();
 	pack.prim_tri_index.resize(tidx_size);
+
 	pack.prim_tri_verts.clear();
 	pack.prim_tri_verts.resize(num_prim_triangles * 3);
+	pack.prim_tri_uv_geopattern.clear();
+	pack.prim_tri_uv_geopattern.resize(num_prim_triangles * 3);
+
 	pack.prim_visibility.clear();
 	pack.prim_visibility.resize(tidx_size);
 	/* Fill in all the arrays. */
@@ -155,7 +176,7 @@ void BVH::pack_primitives()
 			Object *ob = objects[tob];
 
 			if((pack.prim_type[i] & PRIMITIVE_ALL_TRIANGLE) != 0) {
-				pack_triangle(i, (float4*)&pack.prim_tri_verts[3 * prim_triangle_index]);
+				pack_triangle(i, (float4*)&pack.prim_tri_verts[3 * prim_triangle_index], (float2*)&pack.prim_tri_uv_geopattern[3 * prim_triangle_index]);
 				pack.prim_tri_index[i] = 3 * prim_triangle_index;
 				++prim_triangle_index;
 			}
@@ -215,10 +236,17 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 	size_t object_offset = 0;
 
 	map<Mesh*, int> mesh_map;
+	map<Mesh*, int> mesh_map_to_object_id;
+	size_t num_of_clipboxes = 0;
+
 
 	foreach(Object *ob, objects) {
 		Mesh *mesh = ob->mesh;
 		BVH *bvh = mesh->bvh;
+
+		if (mesh->geopattern_settings.olink != GEOPATTERN_NO_LINK) {
+			++num_of_clipboxes;
+		}
 
 		if(mesh->need_build_bvh()) {
 			if(mesh_map.find(mesh) == mesh_map.end()) {
@@ -239,7 +267,8 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 	pack.prim_object.resize(prim_index_size);
 	pack.prim_visibility.resize(prim_index_size);
 	pack.prim_tri_verts.resize(prim_tri_verts_size);
-	pack.prim_tri_index.resize(prim_index_size);
+    pack.prim_tri_uv_geopattern.resize(prim_tri_verts_size);
+    pack.prim_tri_index.resize(prim_index_size);
 	pack.nodes.resize(nodes_size);
 	pack.leaf_nodes.resize(leaf_nodes_size);
 	pack.object_node.resize(objects.size());
@@ -257,14 +286,35 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 	int4 *pack_nodes = (pack.nodes.size())? &pack.nodes[0]: NULL;
 	int4 *pack_leaf_nodes = (pack.leaf_nodes.size())? &pack.leaf_nodes[0]: NULL;
 	float2 *pack_prim_time = (pack.prim_time.size())? &pack.prim_time[0]: NULL;
+	float2 *pack_prim_tri_uv_geopattern = (pack.prim_tri_uv_geopattern.size())? &pack.prim_tri_uv_geopattern[0]: NULL;
 
+	pack.object_geopattern.resize(objects.size());
+	pack.geopattern_clipbox.resize(num_of_clipboxes * 2);
 	/* merge */
-	foreach(Object *ob, objects) {
+    size_t clipbox_offset = 0;
+    foreach(Object *ob, objects) {
 		Mesh *mesh = ob->mesh;
 
 		/* We assume that if mesh doesn't need own BVH it was already included
 		 * into a top-level BVH and no packing here is needed.
 		 */
+
+		if (mesh->geopattern_settings.olink != GEOPATTERN_NO_LINK) {
+			pack.object_geopattern[object_offset].x = __uint_as_float(mesh->geopattern_settings.olink);
+			pack.object_geopattern[object_offset].y = __uint_as_float(2 * clipbox_offset);
+			pack.object_geopattern[object_offset].z = mesh->geopattern_settings.normal_height;
+			pack.object_geopattern[object_offset].w = INFINITY;
+
+			pack.geopattern_clipbox[2 * clipbox_offset]     = float3_to_float4(mesh->geopattern_settings.settings.min);
+			pack.geopattern_clipbox[2 * clipbox_offset + 1] = float3_to_float4(mesh->geopattern_settings.settings.max);
+			clipbox_offset++;
+		} else {
+			pack.object_geopattern[object_offset].x = __uint_as_float(GEOPATTERN_NO_LINK);
+			pack.object_geopattern[object_offset].y = __uint_as_float(GEOPATTERN_NO_LINK);
+			pack.object_geopattern[object_offset].z = INFINITY;
+			pack.object_geopattern[object_offset].w = INFINITY;
+		}
+
 		if(!mesh->need_build_bvh()) {
 			pack.object_node[object_offset++] = 0;
 			continue;
@@ -279,6 +329,8 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 			pack.object_node[object_offset++] = noffset;
 			continue;
 		}
+		// нужно бы несколько bvh для одной mesh
+
 
 		BVH *bvh = mesh->bvh;
 
@@ -294,6 +346,7 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 			pack.object_node[object_offset++] = noffset;
 
 		mesh_map[mesh] = pack.object_node[object_offset-1];
+		mesh_map_to_object_id[mesh] = object_offset - 1;
 
 		/* merge primitive, object and triangle indexes */
 		if(bvh->pack.prim_index.size()) {
@@ -331,6 +384,11 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 			memcpy(pack_prim_tri_verts + pack_prim_tri_verts_offset,
 			       &bvh->pack.prim_tri_verts[0],
 			       prim_tri_size*sizeof(float4));
+
+			memcpy(pack_prim_tri_uv_geopattern + pack_prim_tri_verts_offset,
+				   &bvh->pack.prim_tri_uv_geopattern[0],
+				   prim_tri_size*sizeof(float2));
+
 			pack_prim_tri_verts_offset += prim_tri_size;
 		}
 

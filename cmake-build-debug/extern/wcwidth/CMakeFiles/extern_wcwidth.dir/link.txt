@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libextern_wcwidth.a  CMakeFiles/extern_wcwidth.dir/wcwidth.c.o
+/usr/bin/ranlib ../../lib/libextern_wcwidth.a

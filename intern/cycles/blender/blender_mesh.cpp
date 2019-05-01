@@ -419,7 +419,7 @@ static void attr_create_uv_map(Scene *scene,
 			ustring name = ustring(l->name().c_str());
 
 			/* UV map */
-			if(mesh->need_attribute(scene, name) || mesh->need_attribute(scene, std)) {
+			if(mesh->need_attribute(scene, name) || mesh->need_attribute(scene, std) || strncmp(name.c_str(), "Geopattern_uv", 11) == 0) {
 				Attribute *attr;
 
 				if(active_render)
@@ -452,7 +452,7 @@ static void attr_create_uv_map(Scene *scene,
 			ustring name = ustring(l->name().c_str());
 
 			/* UV map */
-			if(mesh->need_attribute(scene, name) || mesh->need_attribute(scene, std)) {
+			if(mesh->need_attribute(scene, name) || mesh->need_attribute(scene, std) || strncmp(name.c_str(), "Geopattern_uv", 11) == 0) {
 				Attribute *attr;
 
 				if(active_render)
@@ -1056,6 +1056,35 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 		                                 !preview,
 		                                 need_undeformed,
 		                                 mesh->subdivision_type);
+
+        auto ptr = b_ob.data().ptr;
+        auto geopattern_link_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_link\"]");
+        if (geopattern_link_prop) {
+            if (RNA_property_type(geopattern_link_prop) == PROP_STRING) {
+                size_t len = RNA_property_string_length(&ptr, geopattern_link_prop);
+                std::unique_ptr<char[]> memory(new char[len + 1]);
+                RNA_property_string_get(&ptr, geopattern_link_prop, memory.get());
+                mesh->geopattern_settings.link = ustring { memory.get() };
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): Error: type of Geopattern_link property is not string!\n",
+                        mesh->name.c_str());
+            }
+        } else {
+            fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_link wasn't found!\n",
+                    mesh->name.c_str());
+        }
+        auto geopattern_height_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_height\"]");
+        if (geopattern_height_prop) {
+            if (RNA_property_type(geopattern_height_prop) == PROP_FLOAT) {
+                mesh->geopattern_settings.normal_height = RNA_property_float_get(&ptr, geopattern_height_prop);
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): type of Geopattern_height property is not float!\n",
+                        mesh->name.c_str());
+            }
+        } else {
+            fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_height wasn't found!\n",
+                    mesh->name.c_str());
+        }
 
 		if(b_mesh) {
 			if(render_layer.use_surfaces && !hide_tris) {

@@ -1111,7 +1111,7 @@ bool Mesh::has_true_displacement() const
 
 bool Mesh::need_build_bvh() const
 {
-	return !transform_applied || has_surface_bssrdf;
+	return !transform_applied || has_surface_bssrdf || geopattern_settings.used_as_pattern;
 }
 
 bool Mesh::is_instanced() const
@@ -1885,6 +1885,30 @@ void MeshManager::device_update_bvh(Device *device, DeviceScene *dscene, Scene *
 		device->tex_alloc("__prim_time", dscene->prim_time);
 	}
 
+	if(pack.prim_tri_uv_geopattern.size()) {
+		dscene->prim_tri_uv_geopattern.reference((float2*)&pack.prim_tri_uv_geopattern[0], pack.prim_tri_uv_geopattern.size());
+		device->tex_alloc("__prim_tri_uv_geopattern", dscene->prim_tri_uv_geopattern);
+
+		/*for (int i = 0; i < pack.prim_tri_uv_geopattern.size(); i++) {
+			printf("%d {%f %f}", i, (double)pack.prim_tri_uv_geopattern[i].x, (double)pack.prim_tri_uv_geopattern[i].y);
+		}*/
+	}
+	printf("\n");
+
+	if(pack.object_geopattern.size()) {
+		dscene->object_geopattern.reference((float4*)&pack.object_geopattern[0], pack.object_geopattern.size());
+		device->tex_alloc("__object_geopattern", dscene->object_geopattern);
+
+		/*for (int i = 0; i < pack.object_geopattern.size(); i++) {
+			printf("obj %d geo settings: link %d clipbox %d height %f\n",i, __float_as_uint(pack.object_geopattern[i].x), __float_as_uint(pack.object_geopattern[i].y), (double)pack.object_geopattern[i].z);
+		}*/
+
+	}
+	if(pack.geopattern_clipbox.size()) {
+		dscene->geopattern_clipbox.reference((float4*)&pack.geopattern_clipbox[0], pack.geopattern_clipbox.size());
+		device->tex_alloc("__geopattern_clipbox", dscene->geopattern_clipbox);
+	}
+
 	dscene->data.bvh.root = pack.root_index;
 	dscene->data.bvh.use_qbvh = scene->params.use_qbvh;
 	dscene->data.bvh.use_bvh_steps = (scene->params.num_bvh_time_steps != 0);
@@ -2160,7 +2184,8 @@ void MeshManager::device_free(Device *device, DeviceScene *dscene)
 	device->tex_free(dscene->bvh_leaf_nodes);
 	device->tex_free(dscene->object_node);
 	device->tex_free(dscene->prim_tri_verts);
-	device->tex_free(dscene->prim_tri_index);
+
+    device->tex_free(dscene->prim_tri_index);
 	device->tex_free(dscene->prim_type);
 	device->tex_free(dscene->prim_visibility);
 	device->tex_free(dscene->prim_index);
@@ -2174,12 +2199,17 @@ void MeshManager::device_free(Device *device, DeviceScene *dscene)
 	device->tex_free(dscene->curves);
 	device->tex_free(dscene->curve_keys);
 	device->tex_free(dscene->patches);
+
 	device->tex_free(dscene->attributes_map);
 	device->tex_free(dscene->attributes_float);
 	device->tex_free(dscene->attributes_float3);
 	device->tex_free(dscene->attributes_uchar4);
 
-	dscene->bvh_nodes.clear();
+    device->tex_free(dscene->object_geopattern);
+    device->tex_free(dscene->geopattern_clipbox);
+    device->tex_free(dscene->prim_tri_uv_geopattern);
+
+    dscene->bvh_nodes.clear();
 	dscene->object_node.clear();
 	dscene->prim_tri_verts.clear();
 	dscene->prim_tri_index.clear();
@@ -2200,6 +2230,9 @@ void MeshManager::device_free(Device *device, DeviceScene *dscene)
 	dscene->attributes_float.clear();
 	dscene->attributes_float3.clear();
 	dscene->attributes_uchar4.clear();
+	dscene->object_geopattern.clear();
+	dscene->geopattern_clipbox.clear();
+	dscene->prim_tri_uv_geopattern.clear();
 
 #ifdef WITH_OSL
 	OSLGlobals *og = (OSLGlobals*)device->osl_memory();

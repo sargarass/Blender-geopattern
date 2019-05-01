@@ -174,7 +174,9 @@ ccl_device_inline bool motion_triangle_intersect(
         float time,
         uint visibility,
         int object,
-        int prim_addr)
+        int prim_addr,
+		const float t_near = -FLT_MAX,
+		const float t_far = FLT_MAX)
 {
 	/* Primitive index for vertex location lookup. */
 	int prim = kernel_tex_fetch(__prim_index, prim_addr);
@@ -195,6 +197,7 @@ ccl_device_inline bool motion_triangle_intersect(
 	                          verts[0], verts[1], verts[2],
 #endif
 	                          &u, &v, &t))
+	if (t >= t_near && t <= t_far)
 	{
 #ifdef __VISIBILITY_FLAG__
 		/* Visibility flag test. we do it here under the assumption

@@ -52,6 +52,12 @@ struct PackedBVH {
 	array<uint> prim_tri_index;
 	/* Continuous storage of triangle vertices. */
 	array<float4> prim_tri_verts;
+	/* Continuous storage of triangle uv for geopattern. */
+	array<float2> prim_tri_uv_geopattern;
+	/* Map object to geopattern settings */
+	array<float4> object_geopattern;
+	/* Storage of clipboxes for geopatterns */
+	array<float4> geopattern_clipbox;
 	/* primitive type - triangle or strand */
 	array<int> prim_type;
 	/* visibility visibilitys for primitives */
@@ -93,7 +99,7 @@ protected:
 
 	/* triangles and strands */
 	void pack_primitives();
-	void pack_triangle(int idx, float4 storage[3]);
+	void pack_triangle(int idx, float4 storage[3], float2 geopattern_uv[2]);
 
 	/* merge instance BVH's */
 	void pack_instances(size_t nodes_size, size_t leaf_nodes_size);

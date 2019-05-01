@@ -126,9 +126,28 @@ void BVHBuild::add_reference_triangles(BoundBox& root, BoundBox& center, Mesh *m
 	for(uint j = 0; j < num_triangles; j++) {
 		Mesh::Triangle t = mesh->get_triangle(j);
 		const float3 *verts = &mesh->verts[0];
+
 		if(attr_mP == NULL) {
 			BoundBox bounds = BoundBox::empty;
 			t.bounds_grow(verts, bounds);
+
+			if (mesh->geopattern_settings.olink != GEOPATTERN_NO_LINK) {
+				Attribute *attr_vN = mesh->attributes.find(ATTR_STD_VERTEX_NORMAL);
+				if (attr_vN) {
+					bool do_transform = mesh->transform_applied;
+					Transform ntfm = mesh->transform_normal;
+					float3 *normals = attr_vN->data_float3();
+
+					for (int i = 0; i < 3; i++) {
+						float3 normal = normals[t.v[i]];
+						if (do_transform)
+							normal = safe_normalize(transform_direction(&ntfm, normal));
+						bounds.grow(verts[t.v[i]] + mesh->geopattern_settings.normal_height * normal);
+					}
+					printf("EXTENDING NORMALS2!\n");
+				}
+			}
+
 			if(bounds.valid() && t.valid(verts)) {
 				references.push_back(BVHReference(bounds,
 				                                  j,
@@ -371,9 +390,10 @@ void BVHBuild::add_references(BVHRange& root)
 
 	foreach(Object *ob, objects) {
 		if(params.top_level) {
-			if(!ob->is_traceable()) {
+			if(!ob->is_traceable() || ob->used_as_pattern) {
 				continue;
 			}
+
 			if(!ob->mesh->is_instanced()) {
 				if(params.primitive_mask & PRIMITIVE_ALL_TRIANGLE) {
 					num_alloc_references += ob->mesh->num_triangles();
@@ -403,10 +423,11 @@ void BVHBuild::add_references(BVHRange& root)
 
 	foreach(Object *ob, objects) {
 		if(params.top_level) {
-			if(!ob->is_traceable()) {
+			if(!ob->is_traceable() || ob->used_as_pattern) {
 				++i;
 				continue;
 			}
+
 			if(!ob->mesh->is_instanced())
 				add_reference_mesh(bounds, center, ob->mesh, i);
 			else

@@ -63,8 +63,10 @@ public:
 	device_vector<float4> bvh_nodes;
 	device_vector<float4> bvh_leaf_nodes;
 	device_vector<uint> object_node;
-	device_vector<uint> prim_tri_index;
+    device_vector<float4> object_geopattern;
+    device_vector<uint> prim_tri_index;
 	device_vector<float4> prim_tri_verts;
+	device_vector<float2> prim_tri_uv_geopattern;
 	device_vector<uint> prim_type;
 	device_vector<uint> prim_visibility;
 	device_vector<uint> prim_index;
@@ -73,6 +75,7 @@ public:
 
 	/* mesh */
 	device_vector<uint> tri_shader;
+
 	device_vector<float4> tri_vnormal;
 	device_vector<uint4> tri_vindex;
 	device_vector<uint> tri_patch;
@@ -86,6 +89,7 @@ public:
 	/* objects */
 	device_vector<float4> objects;
 	device_vector<float4> objects_vector;
+	device_vector<float4> geopattern_clipbox;
 
 	/* attributes */
 	device_vector<uint4> attributes_map;

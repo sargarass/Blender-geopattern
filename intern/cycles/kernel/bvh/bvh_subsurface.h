@@ -174,6 +174,7 @@ void BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 					}
 				}
 			}
+			printf("!!!!\n");
 
 			/* if node is leaf, fetch triangle list */
 			if(node_addr < 0) {

@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../../lib/libbf_editor_io.a  CMakeFiles/bf_editor_io.dir/io_alembic.c.o CMakeFiles/bf_editor_io.dir/io_cache.c.o CMakeFiles/bf_editor_io.dir/io_collada.c.o CMakeFiles/bf_editor_io.dir/io_ops.c.o
+/usr/bin/ranlib ../../../../lib/libbf_editor_io.a

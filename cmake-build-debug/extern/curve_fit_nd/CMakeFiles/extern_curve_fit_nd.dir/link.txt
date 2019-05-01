@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libextern_curve_fit_nd.a  CMakeFiles/extern_curve_fit_nd.dir/intern/curve_fit_cubic.c.o CMakeFiles/extern_curve_fit_nd.dir/intern/curve_fit_cubic_refit.c.o CMakeFiles/extern_curve_fit_nd.dir/intern/curve_fit_corners_detect.c.o CMakeFiles/extern_curve_fit_nd.dir/intern/generic_heap.c.o
+/usr/bin/ranlib ../../lib/libextern_curve_fit_nd.a

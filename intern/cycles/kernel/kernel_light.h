@@ -765,6 +765,7 @@ ccl_device bool lamp_light_eval(KernelGlobals *kg, int lamp, float3 P, float3 D,
 
 ccl_device void object_transform_light_sample(KernelGlobals *kg, LightSample *ls, int object, float time)
 {
+	printf("object_transform_light_sample\n");
 #ifdef __INSTANCING__
 	/* instance transform */
 	if(!(kernel_tex_fetch(__object_flag, object) & SD_OBJECT_TRANSFORM_APPLIED)) {
@@ -803,7 +804,7 @@ ccl_device void triangle_light_sample(KernelGlobals *kg, int prim, int object,
 	ls->v = v;
 	ls->type = LIGHT_TRIANGLE;
 	ls->eval_fac = 1.0f;
-
+	printf("triangle_light_sample\n");
 	object_transform_light_sample(kg, ls, object, time);
 }
 
@@ -871,7 +872,6 @@ ccl_device_noinline bool light_sample(KernelGlobals *kg,
 	/* fetch light data */
 	float4 l = kernel_tex_fetch(__light_distribution, index);
 	int prim = __float_as_int(l.y);
-
 	if(prim >= 0) {
 		int object = __float_as_int(l.w);
 		int shader_flag = __float_as_int(l.z);

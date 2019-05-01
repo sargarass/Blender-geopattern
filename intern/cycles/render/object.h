@@ -54,7 +54,7 @@ public:
 	bool hide_on_missing_motion;
 	bool use_holdout;
 	bool is_shadow_catcher;
-
+	bool used_as_pattern = false;
 	float3 dupli_generated;
 	float2 dupli_uv;
 

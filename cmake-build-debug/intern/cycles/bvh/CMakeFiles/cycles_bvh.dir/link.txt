@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../lib/libcycles_bvh.a  CMakeFiles/cycles_bvh.dir/bvh.cpp.o CMakeFiles/cycles_bvh.dir/bvh2.cpp.o CMakeFiles/cycles_bvh.dir/bvh4.cpp.o CMakeFiles/cycles_bvh.dir/bvh_binning.cpp.o CMakeFiles/cycles_bvh.dir/bvh_build.cpp.o CMakeFiles/cycles_bvh.dir/bvh_node.cpp.o CMakeFiles/cycles_bvh.dir/bvh_sort.cpp.o CMakeFiles/cycles_bvh.dir/bvh_split.cpp.o CMakeFiles/cycles_bvh.dir/bvh_unaligned.cpp.o
+/usr/bin/ranlib ../../../lib/libcycles_bvh.a

@@ -80,6 +80,7 @@ ccl_device_forceinline bool shadow_handle_transparent_isect(
 #endif
 	/* Setup shader data at surface. */
 	shader_setup_from_ray(kg, shadow_sd, isect, ray);
+
 	/* Attenuation from transparent surface. */
 	if(!(shadow_sd->flag & SD_HAS_ONLY_VOLUME)) {
 		path_state_modify_bounce(state, true);

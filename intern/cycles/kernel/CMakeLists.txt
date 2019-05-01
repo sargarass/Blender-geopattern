@@ -59,8 +59,11 @@ set(SRC_BVH_HEADERS
 	bvh/bvh.h
 	bvh/bvh_nodes.h
 	bvh/bvh_shadow_all.h
+	bvh/bvh_shadow_all_cuda.h
 	bvh/bvh_subsurface.h
 	bvh/bvh_traversal.h
+	bvh/bvh_traversal_cuda.h
+	bvh/bvh_traversal_cuda_types.h
 	bvh/bvh_types.h
 	bvh/bvh_volume.h
 	bvh/bvh_volume_all.h
@@ -235,6 +238,7 @@ set(SRC_UTIL_HEADERS
 	../util/util_color.h
 	../util/util_half.h
 	../util/util_hash.h
+	"../util/util_mat.h"
 	../util/util_math.h
 	../util/util_math_fast.h
 	../util/util_math_intersect.h
