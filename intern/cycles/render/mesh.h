@@ -174,7 +174,8 @@ public:
         ustring link;
         uint olink = GEOPATTERN_NO_LINK;
 		float normal_height = 1.0f;
-		BoundBox settings { make_float3(0.0), make_float3(1.0) };
+		int   flags = 0;
+		BoundBox clipbox { make_float3(0.0), make_float3(1.0) };
 	};
 
 	struct SubdEdgeCrease {

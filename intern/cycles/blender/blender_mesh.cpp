@@ -745,9 +745,9 @@ static void create_mesh(Scene *scene,
 	Attribute *attr_N = attributes.add(ATTR_STD_VERTEX_NORMAL);
 	float3 *N = attr_N->data_float3();
 
-	for(b_mesh.vertices.begin(v); v != b_mesh.vertices.end(); ++v, ++N)
-		*N = get_float3(v->normal());
-	N = attr_N->data_float3();
+    for (b_mesh.vertices.begin(v); v != b_mesh.vertices.end(); ++v, ++N)
+        *N = get_float3(v->normal());
+    N = attr_N->data_float3();
 
 	/* create generated coordinates from undeformed coordinates */
 	if(mesh->need_attribute(scene, ATTR_STD_GENERATED)) {
@@ -1058,32 +1058,133 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 		                                 mesh->subdivision_type);
 
         auto ptr = b_ob.data().ptr;
-        auto geopattern_link_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_link\"]");
-        if (geopattern_link_prop) {
-            if (RNA_property_type(geopattern_link_prop) == PROP_STRING) {
-                size_t len = RNA_property_string_length(&ptr, geopattern_link_prop);
-                std::unique_ptr<char[]> memory(new char[len + 1]);
-                RNA_property_string_get(&ptr, geopattern_link_prop, memory.get());
-                mesh->geopattern_settings.link = ustring { memory.get() };
+        {
+            auto geopattern_link_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_link\"]");
+            if (geopattern_link_prop) {
+                if (RNA_property_type(geopattern_link_prop) == PROP_STRING) {
+                    size_t len = RNA_property_string_length(&ptr, geopattern_link_prop);
+                    std::unique_ptr<char[]> memory(new char[len + 1]);
+                    RNA_property_string_get(&ptr, geopattern_link_prop, memory.get());
+                    mesh->geopattern_settings.link = ustring { memory.get() };
+                } else {
+                    fprintf(stderr, "Geopattern(Mesh %s): Error: type of Geopattern_link property is not string!\n",
+                            mesh->name.c_str());
+                }
             } else {
-                fprintf(stderr, "Geopattern(Mesh %s): Error: type of Geopattern_link property is not string!\n",
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_link wasn't found!\n",
                         mesh->name.c_str());
             }
-        } else {
-            fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_link wasn't found!\n",
-                    mesh->name.c_str());
         }
-        auto geopattern_height_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_height\"]");
-        if (geopattern_height_prop) {
-            if (RNA_property_type(geopattern_height_prop) == PROP_FLOAT) {
-                mesh->geopattern_settings.normal_height = RNA_property_float_get(&ptr, geopattern_height_prop);
+        {
+            auto geopattern_clipbox_min = RNA_struct_find_property(&ptr, "[\"Geopattern_clipbox_min\"]");
+            if (geopattern_clipbox_min) {
+                if (RNA_property_type(geopattern_clipbox_min) == PROP_FLOAT
+                    && RNA_property_array_check(geopattern_clipbox_min)
+                    && RNA_property_array_length(&ptr, geopattern_clipbox_min) == 3) {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of Geopattern_clipbox_min property is FLOAT ARRAY!\n",
+                            mesh->name.c_str());
+
+                    mesh->geopattern_settings.clipbox.min.x = RNA_property_float_get_index(&ptr, geopattern_clipbox_min,
+                                                                                           0);
+                    mesh->geopattern_settings.clipbox.min.y = RNA_property_float_get_index(&ptr, geopattern_clipbox_min,
+                                                                                           1);
+                    mesh->geopattern_settings.clipbox.min.z = RNA_property_float_get_index(&ptr, geopattern_clipbox_min,
+                                                                                           2);
+
+                    printf("Geopattern_clipbox_min: %f %f %f\n", (double)mesh->geopattern_settings.clipbox.min.x,
+                           (double)mesh->geopattern_settings.clipbox.min.y,
+                           (double)mesh->geopattern_settings.clipbox.min.z);
+                } else {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of Geopattern_clipbox_min property is not array of floats length 3! %d\n",
+                            mesh->name.c_str(), RNA_property_type(geopattern_clipbox_min));
+                }
             } else {
-                fprintf(stderr, "Geopattern(Mesh %s): type of Geopattern_height property is not float!\n",
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_clipbox_min wasn't found!\n",
                         mesh->name.c_str());
             }
-        } else {
-            fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_height wasn't found!\n",
-                    mesh->name.c_str());
+        }
+
+        {
+            auto geopattern_clipbox_max = RNA_struct_find_property(&ptr, "[\"Geopattern_clipbox_max\"]");
+            if (geopattern_clipbox_max) {
+                if (RNA_property_type(geopattern_clipbox_max) == PROP_FLOAT
+                    && RNA_property_array_check(geopattern_clipbox_max)
+                    && RNA_property_array_length(&ptr, geopattern_clipbox_max) == 3) {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of geopattern_clipbox_max property is FLOAT ARRAY!\n",
+                            mesh->name.c_str());
+
+                    mesh->geopattern_settings.clipbox.max.x = RNA_property_float_get_index(&ptr, geopattern_clipbox_max,
+                                                                                           0);
+                    mesh->geopattern_settings.clipbox.max.y = RNA_property_float_get_index(&ptr, geopattern_clipbox_max,
+                                                                                           1);
+                    mesh->geopattern_settings.clipbox.max.z = RNA_property_float_get_index(&ptr, geopattern_clipbox_max,
+                                                                                           2);
+
+                    printf("Geopattern_clipbox_max: %f %f %f\n", (double)mesh->geopattern_settings.clipbox.max.x,
+                           (double)mesh->geopattern_settings.clipbox.max.y,
+                           (double)mesh->geopattern_settings.clipbox.max.z);
+                } else {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of Geopattern_clipbox_max property is not array of floats length 3! %d\n",
+                            mesh->name.c_str(), RNA_property_type(geopattern_clipbox_max));
+                }
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_clipbox_max wasn't found!\n",
+                        mesh->name.c_str());
+            }
+        }
+        {
+            auto geopattern_render_base = RNA_struct_find_property(&ptr, "[\"Geopattern_render_base\"]");
+            if (geopattern_render_base) {
+                if (RNA_property_type(geopattern_render_base) == PROP_INT) {
+                    if (RNA_property_int_get(&ptr, geopattern_render_base)) {
+                        mesh->geopattern_settings.flags |= GEOPATTERN_FLAGS_RENDERBASE;
+                    }
+                } else {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of Geopattern_render_base property is not int! %d\n",
+                            mesh->name.c_str(), RNA_property_type(geopattern_render_base));
+                }
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_render_base wasn't found!\n",
+                        mesh->name.c_str());
+            }
+        }
+
+        {
+            auto geopattern_random_offset = RNA_struct_find_property(&ptr, "[\"Geopattern_random_offset\"]");
+            if (geopattern_random_offset) {
+                if (RNA_property_type(geopattern_random_offset) == PROP_INT) {
+                    if (RNA_property_int_get(&ptr, geopattern_random_offset)) {
+                        mesh->geopattern_settings.flags |= GEOPATTERN_FLAGS_RANDOM_OFFSET;
+                    }
+                } else {
+                    fprintf(stderr,
+                            "Geopattern(Mesh %s): Error: type of geopattern_random_offset property is not int! %d\n",
+                            mesh->name.c_str(), RNA_property_type(geopattern_random_offset));
+                }
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property geopattern_random_offset wasn't found!\n",
+                        mesh->name.c_str());
+            }
+        }
+
+        {
+            auto geopattern_height_prop = RNA_struct_find_property(&ptr, "[\"Geopattern_height\"]");
+            if (geopattern_height_prop) {
+                if (RNA_property_type(geopattern_height_prop) == PROP_FLOAT) {
+                    mesh->geopattern_settings.normal_height = RNA_property_float_get(&ptr, geopattern_height_prop);
+                } else {
+                    fprintf(stderr, "Geopattern(Mesh %s): type of Geopattern_height property is not float!\n",
+                            mesh->name.c_str());
+                }
+            } else {
+                fprintf(stderr, "Geopattern(Mesh %s): Warning: property Geopattern_height wasn't found!\n",
+                        mesh->name.c_str());
+            }
         }
 
 		if(b_mesh) {

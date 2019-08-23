@@ -43,6 +43,7 @@ ccl_device_inline float3 triangle_normal(KernelGlobals *kg, ShaderData *sd)
 /* point and normal on triangle  */
 ccl_device_inline void triangle_point_normal(KernelGlobals *kg, int object, int prim, float u, float v, float3 *P, float3 *Ng, int *shader)
 {
+    printf("triangle_point_normal\n");
 	/* load triangle vertices */
 	const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, prim);
 	float3 v0 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+0));

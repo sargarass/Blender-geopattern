@@ -64,7 +64,7 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 		sd->object = (isect->object == PRIM_NONE)? kernel_tex_fetch(__prim_object, isect->prim): isect->object;
 #endif
 		sd->lamp = LAMP_NONE;
-
+	    sd->geopattern = false;
 		sd->type = isect->type;
 		sd->flag = 0;
 		sd->object_flag = kernel_tex_fetch(__object_flag, sd->object);
@@ -76,13 +76,12 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 #endif
 
 		sd->prim = kernel_tex_fetch(__prim_index, isect->prim);
-		sd->ray_length = isect->t;
 
+		sd->ray_length = isect->t;
 #ifdef __UV__
 		sd->u = isect->u;
 		sd->v = isect->v;
 #endif
-
 #ifdef __HAIR__
 		if(sd->type & PRIMITIVE_ALL_CURVE) {
 			/* curve */
@@ -96,10 +95,12 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 		if(sd->type & PRIMITIVE_TRIANGLE) {
 			/* static triangle */
 			float3 Ng = triangle_normal(kg, sd);
-			sd->shader = kernel_tex_fetch(__tri_shader, sd->prim);
 
+			sd->shader = kernel_tex_fetch(__tri_shader, sd->prim);
 			/* vectors */
-			sd->P = triangle_refine(kg, sd, isect, ray);
+
+			sd->P = ray->D * isect->t + ray->P;
+
 			sd->Ng = Ng;
 			sd->N = Ng;
 			/* smooth normal */
@@ -131,11 +132,11 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
             #  endif
                         }
             #endif
-        } else if (isect->object != OBJECT_NONE && isect->entry_object != GEOPATTERN_NO_LINK) {
-			const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, isect->entry_prim);
+        } else {
+			/*const uint4 tri_vindex = kernel_tex_fetch(__tri_vindex, isect->entry_prim);
 			const float3 v0 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+0));
 			const float3 v1 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+1));
-			const float3 v2 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+2));
+			const float3 v2 = float4_to_float3(kernel_tex_fetch(__prim_tri_verts, tri_vindex.w+2));*/
 //
 //
 		    Mat3 TT = transpose(inverse(isect->T));
@@ -145,6 +146,7 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
             float3 dPdu = (isect->T * sd->dPdu);
             float3 dPdv = (isect->T * sd->dPdv);
 //
+
 //
 			//sd->N = normalize(TT * sd->N);
             //normalize(float4_to_float3(TT * make_float4(sd->N.x, sd->N.y, sd->N.z, 0)));
@@ -182,6 +184,16 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 			sd->Ng = Ng;
 			sd->dPdu = dPdu;
 			sd->dPdv = dPdv;
+			sd->geopattern = true;
+			sd->offset_up = isect->offset_up;
+            sd->offset_down = isect->offset_down;
+
+			if (dot(sd->N, sd->Ng) < 0.0f) {
+				sd->N = -sd->N;
+			}
+
+			/*printf("%f %f %f | %f %f %f\n",
+				   (double)sd->Ng.x,  (double)sd->Ng.y, (double)sd->Ng.z, (double)sd->N.x,  (double)sd->N.y, (double)sd->N.z);*/
             //sd->dPdu = (float4_to_float3(isect->T * make_float4(sd->dPdu.x, sd->dPdu.y, sd->dPdu.z, 0)));
 			//sd->dPdv = (float4_to_float3(isect->T * make_float4(sd->dPdv.x, sd->dPdv.y, sd->dPdv.z, 0)));
 			//triangle_dPdudv(kg, isect->entry_prim, &sd->dPdu, &sd->dPdv);
@@ -350,7 +362,7 @@ void shader_setup_from_subsurface(
         const Ray *ray)
 {
 	const bool backfacing = sd->flag & SD_BACKFACING;
-
+	sd->geopattern = false;
 	/* object, matrices, time, ray_length stay the same */
 	sd->flag = 0;
 	sd->object_flag = kernel_tex_fetch(__object_flag, sd->object);
@@ -361,6 +373,7 @@ void shader_setup_from_subsurface(
 	sd->u = isect->u;
 	sd->v = isect->v;
 #  endif
+	printf("shader_setup_from_subsurface\n");
 
 	/* fetch triangle data */
 	if(sd->type == PRIMITIVE_TRIANGLE) {
@@ -399,6 +412,7 @@ void shader_setup_from_subsurface(
 	}
 #  endif
 
+
 	/* backfacing test */
 	if(backfacing) {
 		sd->flag |= SD_BACKFACING;
@@ -436,12 +450,13 @@ ccl_device_inline void shader_setup_from_sample(KernelGlobals *kg,
                                                 int lamp)
 {
 
-	printf("shader_setup_from_sample\n");
+	printf("shader_setup_from_sample %d\n", object_space);
 	/* vectors */
 	sd->P = P;
 	sd->N = Ng;
 	sd->Ng = Ng;
 	sd->I = I;
+	sd->geopattern = false;
 	sd->shader = shader;
 	if(prim != PRIM_NONE)
 		sd->type = PRIMITIVE_TRIANGLE;
@@ -487,8 +502,6 @@ ccl_device_inline void shader_setup_from_sample(KernelGlobals *kg,
 		sd->N = sd->Ng;
 		object_dir_transform_auto(kg, sd, &sd->I);
 	}
-
-	printf("%d ", object_space);
 
 	if(sd->type & PRIMITIVE_TRIANGLE) {
 		/* smooth normal */
@@ -572,6 +585,7 @@ ccl_device void shader_setup_from_displace(KernelGlobals *kg, ShaderData *sd,
 ccl_device_inline void shader_setup_from_background(KernelGlobals *kg, ShaderData *sd, const Ray *ray)
 {
 	/* vectors */
+	sd->geopattern = false;
 	sd->P = ray->D;
 	sd->N = -ray->D;
 	sd->Ng = -ray->D;
@@ -583,7 +597,7 @@ ccl_device_inline void shader_setup_from_background(KernelGlobals *kg, ShaderDat
 	sd->time = ray->time;
 #endif
 	sd->ray_length = 0.0f;
-
+	sd->geopattern = false;
 #ifdef __INSTANCING__
 	//FIXME: CYCLES_ERROR?
 	sd->object = PRIM_NONE;
@@ -615,6 +629,7 @@ ccl_device_inline void shader_setup_from_background(KernelGlobals *kg, ShaderDat
 #ifdef __VOLUME__
 ccl_device_inline void shader_setup_from_volume(KernelGlobals *kg, ShaderData *sd, const Ray *ray)
 {
+	sd->geopattern = false;
 	/* vectors */
 	sd->P = ray->P;
 	sd->N = -ray->D;  

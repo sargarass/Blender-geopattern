@@ -46,7 +46,11 @@ ccl_device_inline void kernel_branched_path_ao(KernelGlobals *kg,
 			Ray light_ray;
 			float3 ao_shadow;
 
-			light_ray.P = ray_offset(sd->P, sd->Ng);
+			if (sd->geopattern) {
+				light_ray.P = sd->offset_up;
+			} else {
+				light_ray.P = ray_offset(sd->P, sd->Ng);
+			}
 			light_ray.D = ao_D;
 			light_ray.t = kernel_data.background.ao_distance;
 #ifdef __OBJECT_MOTION__

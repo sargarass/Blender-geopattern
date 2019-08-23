@@ -174,7 +174,6 @@ float3 bsdf_eval(KernelGlobals *kg,
                  float *pdf)
 {
 	float3 eval;
-
 	if(dot(sd->Ng, omega_in) >= 0.0f) {
 		switch(sc->type) {
 			case CLOSURE_BSDF_DIFFUSE_ID:

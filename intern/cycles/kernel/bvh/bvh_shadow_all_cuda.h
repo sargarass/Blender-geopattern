@@ -70,7 +70,6 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 	float3 dir = bvh_clamp_direction(ray->D);
 	float3 idir = bvh_inverse_direction(dir);
 	int object = OBJECT_NONE;
-	Mat3 T;
 	int  entry_prim = GEOPATTERN_NO_LINK;
 	int  entry_obj = GEOPATTERN_NO_LINK;
 	float isect_t = tmax;
@@ -179,13 +178,18 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 
 						switch(p_type) {
 							case PRIMITIVE_TRIANGLE: {
+#ifndef __SHADOW_TRICKS__
                                 int object_idx = ((object == OBJECT_NONE)? kernel_tex_fetch(__prim_object, prim_addr) : object);
+#else
+								int object_idx = tri_object;
+#endif
 								const float4 geopattern_settings = kernel_tex_fetch(__object_geopattern, object_idx);
 								const uint geopattern_link = __float_as_uint(geopattern_settings.x);
 								const uint geopattern_clipbox_link = __float_as_uint(geopattern_settings.y);
 								const float geopatten_height = geopattern_settings.z;
-								assert((object == OBJECT_NONE)? true : (geopattern_link == GEOPATTERN_NO_LINK));
-								if (geopattern_link == GEOPATTERN_NO_LINK) {
+								const uint geopattern_flags = __float_as_uint(geopattern_settings.w);
+								//assert((object == OBJECT_NONE)? true : (geopattern_link == GEOPATTERN_NO_LINK));
+								if (entry_obj == object_idx || geopattern_link == GEOPATTERN_NO_LINK) {
 									hit = triangle_intersect(kg,
 															 isect_array,
 															 P,
@@ -196,25 +200,19 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
                                                              t_near,
                                                              t_far);
 
-									if (hit) {
-										isect_array->entry_object = entry_obj;
-										isect_array->entry_prim = entry_prim;
-										isect_array->T = T;
-									}
+//									if (hit) {
+//										isect_array->entry_object = entry_obj;
+//										isect_array->entry_prim = entry_prim;
+//									}
 
 								} else {
-									if (common_part_geopattern_inside(prim_addr, object_idx, geopattern_link, geopattern_clipbox_link, geopatten_height,
-																	  P, dir, idir, isect_array->t,
-																	  stack_ptr,traversal_stack, node_addr, object,
-																	  geoframe, T, t_near, t_far)) {
+									if (common_part_geopattern_inside(kg, prim_addr, object_idx, geopattern_link, geopattern_clipbox_link, geopatten_height, geopattern_flags,
+																	  P, dir, idir, isect_t, t_near, t_far,
+																	  stack_ptr, traversal_stack, node_addr, object,
+																	  geoframe, isect_array)) {
 										const int prim = kernel_tex_fetch(__prim_index, prim_addr);
 										entry_prim = prim;
-										entry_obj = object;
-
-										if (isect_t != FLT_MAX) {
-											isect_t = (isect_t - geoframe.min_t) * geoframe.mult_t + offset_t;
-										}
-
+										entry_obj = object_idx;
 										num_hits_in_geopattern = 0;
 										isect_array->t = isect_t;
 									}
@@ -348,28 +346,23 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
                     assert(stack_ptr < BVH_STACK_SIZE);
                     traversal_stack[stack_ptr] = INSTANCE_SENTINEL;
 
-                    ++stack_ptr;
-                    kernel_assert(stack_ptr < BVH_STACK_SIZE);
-                    traversal_stack[stack_ptr] = ENTRYPOINT_SENTINEL;
-
 					node_addr = kernel_tex_fetch(__object_node, object);
 				}
 			}
 #endif  /* FEATURE(BVH_INSTANCING) */
-		} while(node_addr != ENTRYPOINT_SENTINEL);
+		} while(!IS_SENTINEL(node_addr));
 		if (stack_ptr > 0) {
-			int sentinel = traversal_stack[stack_ptr];
-			--stack_ptr;
-			assert(stack_ptr >= 0);
-			int recovered_object = traversal_stack[stack_ptr];
-			--stack_ptr;
-			assert(stack_ptr >= 0);
-			if (sentinel == GEOPATTERN_SENTINEL) {
+			if (node_addr == GEOPATTERN_SENTINEL) {
+				int recovered_object = traversal_stack[stack_ptr];
+				--stack_ptr;
+				assert(stack_ptr >= 0);
+
 				if(num_hits_in_geopattern) {
 					for(int i = 0; i < num_hits_in_geopattern; i++) {
-						(isect_array-i-1)->t = ((isect_array-i-1)->t - offset_t) / geoframe.mult_t + geoframe.min_t;
+						(isect_array-i-1)->t = ((isect_array-i-1)->t - offset_t) / geoframe.t_mult + geoframe.t_min;
 					}
 				}
+
                 P = geoframe.P;
                 dir = geoframe.dir;
                 idir = bvh_inverse_direction(dir);
@@ -382,9 +375,16 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 				entry_obj = GEOPATTERN_NO_LINK;
 				entry_prim = GEOPATTERN_NO_LINK;
 				num_hits_in_geopattern = 0;
+
+				object = recovered_object;
+				node_addr = traversal_stack[stack_ptr];
+				--stack_ptr;
 			}
 #if BVH_FEATURE(BVH_INSTANCING)
-			if (sentinel == INSTANCE_SENTINEL) {
+			if (node_addr == INSTANCE_SENTINEL) {
+				int recovered_object = traversal_stack[stack_ptr];
+				--stack_ptr;
+				assert(stack_ptr >= 0);
                 kernel_assert(object != OBJECT_NONE);
 
                 /* Instance pop. */
@@ -411,11 +411,12 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 
                 isect_t = tmax;
                 isect_array->t = isect_t;
+
+                object = recovered_object;
+				node_addr = traversal_stack[stack_ptr];
+				--stack_ptr;
             }
 #endif  /* FEATURE(BVH_INSTANCING) */
-			object = recovered_object;
-			node_addr = traversal_stack[stack_ptr];
-			--stack_ptr;
 		}
 	} while(node_addr != ENTRYPOINT_SENTINEL);
 
@@ -429,7 +430,6 @@ ccl_device_inline bool BVH_FUNCTION_NAME(KernelGlobals *kg,
                                          const uint max_hits,
                                          uint *num_hits)
 {
-    return false;
     #ifdef __QBVH__
 	if(kernel_data.bvh.use_qbvh) {
 		return BVH_FUNCTION_FULL_NAME(QBVH)(kg,

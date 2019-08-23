@@ -21,6 +21,13 @@ struct Mat3 {
     }
 };
 
+ccl_device_inline float det(Mat3 const &m) {
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
+                m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    return det;
+}
+
 ccl_device_inline Mat3 inverse(Mat3 const &m) {
     float det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
                 m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +

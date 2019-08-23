@@ -184,7 +184,11 @@ ccl_device bool kernel_branched_path_surface_bounce(
 	path_state_next(kg, state, label);
 
 	/* setup ray */
-	ray->P = ray_offset(sd->P, (label & LABEL_TRANSMIT)? -sd->Ng: sd->Ng);
+	if (sd->geopattern) {
+		ray->P = (label & LABEL_TRANSMIT)? sd->offset_down : sd->offset_up;
+	} else {
+		ray->P = ray_offset(sd->P, (label & LABEL_TRANSMIT)? -sd->Ng: sd->Ng);
+	}
 	ray->D = normalize(bsdf_omega_in);
 	ray->t = FLT_MAX;
 #ifdef __RAY_DIFFERENTIALS__
@@ -258,6 +262,7 @@ ccl_device_inline void kernel_path_surface_connect_light(KernelGlobals *kg, RNG 
 		float terminate = path_state_rng_light_termination(kg, rng, state);
 		if(direct_emission(kg, sd, emission_sd, &ls, state, &light_ray, &L_light, &is_lamp, terminate)) {
 			/* trace shadow ray */
+
 			float3 shadow;
 
 			if(!shadow_blocked(kg, emission_sd, state, &light_ray, &shadow)) {
@@ -314,7 +319,20 @@ ccl_device bool kernel_path_surface_bounce(KernelGlobals *kg,
 		path_state_next(kg, state, label);
 
 		/* setup ray */
-		ray->P = ray_offset(sd->P, (label & LABEL_TRANSMIT)? -sd->Ng: sd->Ng);
+
+		if (sd->geopattern) {
+        //    ray->P = sd->P + 1e-4f * normalize(sd->N); //sd->P + len(sd->offset_up - sd->P) * sd->Ng;
+
+            //ray->P = (label & LABEL_TRANSMIT) ? sd->offset_down : sd->offset_up;
+            //ray->P = ray_offset(sd->P, (label & LABEL_TRANSMIT) ? -sd->Ng : sd->Ng);
+
+            //printf("%f\n", (double)len(sd->offset_up - ray->P));
+            ray->P = (label & LABEL_TRANSMIT) ? sd->offset_down : sd->offset_up;
+        } else {
+            ray->P = ray_offset(sd->P, (label & LABEL_TRANSMIT) ? -sd->Ng : sd->Ng);
+        }
+		//!!! printf("ray->P = ray_offset\n");
+
 		ray->D = normalize(bsdf_omega_in);
 
 		if(state->bounce == 0)
@@ -347,7 +365,11 @@ ccl_device bool kernel_path_surface_bounce(KernelGlobals *kg,
 			ray->t = FLT_MAX;
 
 		/* setup ray position, direction stays unchanged */
-		ray->P = ray_offset(sd->P, -sd->Ng);
+        if (sd->geopattern) {
+            ray->P = sd->offset_down;
+        } else {
+            ray->P = ray_offset(sd->P, -sd->Ng);
+        }
 #ifdef __RAY_DIFFERENTIALS__
 		ray->dP = sd->dP;
 #endif

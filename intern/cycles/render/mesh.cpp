@@ -699,6 +699,26 @@ void Mesh::compute_bounds()
 			}
 		}
 	}
+	if (geopattern_settings.olink != GEOPATTERN_NO_LINK) {
+		Attribute *attr_vN = attributes.find(ATTR_STD_VERTEX_NORMAL);
+		if (attr_vN) {
+			const size_t num_triangles = this->num_triangles();
+			bool do_transform = transform_applied;
+			Transform ntfm = transform_normal;
+			float3 *normals = attr_vN->data_float3();
+
+			for (uint j = 0; j < num_triangles; j++) {
+				Mesh::Triangle t = get_triangle(j);
+				for (int i = 0; i < 3; i++) {
+					float3 normal = normals[t.v[i]];
+					//if (do_transform)
+					//	normal = safe_normalize(transform_direction(&ntfm, normal));
+					bnds.grow(verts[t.v[i]] + geopattern_settings.normal_height * normal);
+				}
+			}
+		}
+	}
+
 
 	if(!bnds.valid()) {
 		/* empty mesh */

@@ -128,15 +128,15 @@ void BVH::pack_triangle(int idx, float4 tri_verts[3], float2 geopattern_uv[2])
 
 	auto attr = mesh->attributes.find(ustring{"Geopattern_uv"});
 	if (attr) {
-		fprintf(stderr, "Geopattern_uv!\n");
+		//fprintf(stderr, "Geopattern_uv!\n");
 		float3 *tex = attr->data_float3();
 		geopattern_uv[0] = make_float2(tex[3 * tidx + 0].x, tex[3 * tidx + 0].y);
 		geopattern_uv[1] = make_float2(tex[3 * tidx + 1].x, tex[3 * tidx + 1].y);
 		geopattern_uv[2] = make_float2(tex[3 * tidx + 2].x, tex[3 * tidx + 2].y);
 
-		printf("%f %f %f | %f %f\n", (double)tri_verts[0].x, (double)tri_verts[0].y,(double) tri_verts[0].z,(double) geopattern_uv[0].x, (double)geopattern_uv[0].y);
-		printf("%f %f %f | %f %f\n", (double)tri_verts[1].x, (double)tri_verts[1].y, (double)tri_verts[1].z,(double) geopattern_uv[1].x,(double) geopattern_uv[1].y);
-		printf("%f %f %f | %f %f\n", (double)tri_verts[2].x, (double)tri_verts[2].y,(double) tri_verts[2].z, (double)geopattern_uv[2].x,(double) geopattern_uv[2].y);
+//		printf("%f %f %f | %f %f\n", (double)tri_verts[0].x, (double)tri_verts[0].y,(double) tri_verts[0].z,(double) geopattern_uv[0].x, (double)geopattern_uv[0].y);
+//		printf("%f %f %f | %f %f\n", (double)tri_verts[1].x, (double)tri_verts[1].y, (double)tri_verts[1].z,(double) geopattern_uv[1].x,(double) geopattern_uv[1].y);
+//		printf("%f %f %f | %f %f\n", (double)tri_verts[2].x, (double)tri_verts[2].y,(double) tri_verts[2].z, (double)geopattern_uv[2].x,(double) geopattern_uv[2].y);
 
 	} else {
 		geopattern_uv[0] = make_float2(0.0f, 0.0f);
@@ -301,13 +301,21 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 
 		if (mesh->geopattern_settings.olink != GEOPATTERN_NO_LINK) {
 			pack.object_geopattern[object_offset].x = __uint_as_float(mesh->geopattern_settings.olink);
-			pack.object_geopattern[object_offset].y = __uint_as_float(2 * clipbox_offset);
+			pack.object_geopattern[object_offset].y = __uint_as_float(clipbox_offset);
 			pack.object_geopattern[object_offset].z = mesh->geopattern_settings.normal_height;
-			pack.object_geopattern[object_offset].w = INFINITY;
+			pack.object_geopattern[object_offset].w = __uint_as_float(mesh->geopattern_settings.flags);
 
-			pack.geopattern_clipbox[2 * clipbox_offset]     = float3_to_float4(mesh->geopattern_settings.settings.min);
-			pack.geopattern_clipbox[2 * clipbox_offset + 1] = float3_to_float4(mesh->geopattern_settings.settings.max);
-			clipbox_offset++;
+			pack.geopattern_clipbox[clipbox_offset]     = float3_to_float4(mesh->geopattern_settings.clipbox.min);
+			pack.geopattern_clipbox[clipbox_offset + 1] = float3_to_float4(mesh->geopattern_settings.clipbox.max);
+
+			printf("Packing geopattern_clipbox_min for object %d: link %d: %f %f %f\n",
+					                                     object_offset,
+					                                     clipbox_offset,
+					                                     (double)mesh->geopattern_settings.clipbox.min.x,
+					                                     (double)mesh->geopattern_settings.clipbox.min.y,
+					                                     (double)mesh->geopattern_settings.clipbox.min.z);
+
+			clipbox_offset += 2;
 		} else {
 			pack.object_geopattern[object_offset].x = __uint_as_float(GEOPATTERN_NO_LINK);
 			pack.object_geopattern[object_offset].y = __uint_as_float(GEOPATTERN_NO_LINK);

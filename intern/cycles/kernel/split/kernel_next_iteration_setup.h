@@ -72,8 +72,11 @@ ccl_device void kernel_split_branched_indirect_light_end(KernelGlobals *kg, int 
 		/* Update Path State */
 		state->flag |= PATH_RAY_TRANSPARENT;
 		state->transparent_bounce++;
-
-		ray->P = ray_offset(sd->P, -sd->Ng);
+		if (sd->geopattern) {
+			ray->P = sd->offset_down;
+		} else {
+			ray->P = ray_offset(sd->P, -sd->Ng);
+		}
 		ray->t -= sd->ray_length; /* clipping works through transparent */
 
 #  ifdef __RAY_DIFFERENTIALS__

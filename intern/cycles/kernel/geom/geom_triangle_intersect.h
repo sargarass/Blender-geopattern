@@ -260,7 +260,7 @@ ccl_device_inline float3 triangle_refine_subsurface(KernelGlobals *kg,
 	float3 D = ray->D;
 	float t = isect->t;
 
-	if(isect->object != OBJECT_NONE && isect->entry_prim != GEOPATTERN_NO_LINK) {
+	if(isect->object != OBJECT_NONE) {
 #ifdef __OBJECT_MOTION__
 		Transform tfm = sd->ob_itfm;
 #else
@@ -298,7 +298,7 @@ ccl_device_inline float3 triangle_refine_subsurface(KernelGlobals *kg,
 	}
 #endif  /* __INTERSECTION_REFINE__ */
 
-	if(isect->object != OBJECT_NONE && isect->entry_prim != GEOPATTERN_NO_LINK) {
+	if (isect->object != OBJECT_NONE) {
 #ifdef __OBJECT_MOTION__
 		Transform tfm = sd->ob_tfm;
 #else

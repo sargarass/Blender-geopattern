@@ -144,15 +144,13 @@ void BVHBuild::add_reference_triangles(BoundBox& root, BoundBox& center, Mesh *m
 							normal = safe_normalize(transform_direction(&ntfm, normal));
 						bounds.grow(verts[t.v[i]] + mesh->geopattern_settings.normal_height * normal);
 					}
-					printf("EXTENDING NORMALS2!\n");
 				}
 			}
-
-			if(bounds.valid() && t.valid(verts)) {
+			if (bounds.valid() && t.valid(verts)) {
 				references.push_back(BVHReference(bounds,
-				                                  j,
-				                                  i,
-				                                  PRIMITIVE_TRIANGLE));
+												  j,
+												  i,
+												  PRIMITIVE_TRIANGLE));
 				root.grow(bounds);
 				center.grow(bounds.center2());
 			}
@@ -632,7 +630,6 @@ bool BVHBuild::range_within_max_leaf_size(const BVHRange& range,
 
 	for(int i = 0; i < size; i++) {
 		const BVHReference& ref = references[range.start() + i];
-
 		if(ref.prim_type() & PRIMITIVE_CURVE)
 			num_curves++;
 		if(ref.prim_type() & PRIMITIVE_MOTION_CURVE)

@@ -36,6 +36,9 @@ CCL_NAMESPACE_BEGIN
 
 /* constants */
 #define GEOPATTERN_NO_LINK 0xFFFFFFFFu
+#define GEOPATTERN_FLAGS_RENDERBASE (1 << 0)
+#define GEOPATTERN_FLAGS_RANDOM_OFFSET (1 << 1)
+
 #define OBJECT_SIZE 		12
 #define OBJECT_VECTOR_SIZE	6
 #define LIGHT_SIZE		11
@@ -223,12 +226,12 @@ CCL_NAMESPACE_BEGIN
 #ifdef __KERNEL_CUDA__
 #  define __KERNEL_SHADING__
 #  define __KERNEL_ADV_SHADING__
-//#  define __VOLUME__
-//#  define __VOLUME_SCATTER__
-//#  define __SUBSURFACE__
-//#  define __PRINCIPLED__
-//#  define __SHADOW_RECORD_ALL__
-//#  define __CMJ__
+#  define __VOLUME__
+#  define __VOLUME_SCATTER__
+#  define __SUBSURFACE__
+#  define __PRINCIPLED__
+#  define __SHADOW_RECORD_ALL__
+#  define __CMJ__
 #  ifndef __SPLIT_KERNEL__
 #    define __BRANCHED_PATH__
 #  endif
@@ -286,40 +289,40 @@ CCL_NAMESPACE_BEGIN
 
 /* kernel features */
 #define __SOBOL__
-//#define __INSTANCING__
+#define __INSTANCING__
 #define __DPDU__
 #define __UV__
 #define __BACKGROUND__
-//#define __CAUSTICS_TRICKS__
-//#define __VISIBILITY_FLAG__
+#define __CAUSTICS_TRICKS__
+#define __VISIBILITY_FLAG__
 #define __RAY_DIFFERENTIALS__
-//#define __CAMERA_CLIPPING__
+#define __CAMERA_CLIPPING__
 //#define __INTERSECTION_REFINE__
-//#define __CLAMP_SAMPLE__
-//#define __PATCH_EVAL__
-//#define __SHADOW_TRICKS__
-//
-//#define __DENOISING_FEATURES__
+#define __CLAMP_SAMPLE__
+#define __PATCH_EVAL__
+#define __SHADOW_TRICKS__
+
+#define __DENOISING_FEATURES__
 
 #ifdef __KERNEL_SHADING__
 #  define __SVM__
 #  define __EMISSION__
 #  define __TEXTURES__
-//#  define __EXTRA_NODES__
-//#  define __HOLDOUT__
+#  define __EXTRA_NODES__
+#  define __HOLDOUT__
 #endif
 
 #ifdef __KERNEL_ADV_SHADING__
-//#  define __MULTI_CLOSURE__
-//#  define __TRANSPARENT_SHADOWS__
+#  define __MULTI_CLOSURE__
+#  define __TRANSPARENT_SHADOWS__
 #  define __PASSES__
 #  define __BACKGROUND_MIS__
 #  define __LAMP_MIS__
-//#  define __AO__
-//#  define __CAMERA_MOTION__
-//#  define __OBJECT_MOTION__
-//#  define __HAIR__
-//#  define __BAKING__
+#  define __AO__
+#  define __CAMERA_MOTION__
+#  define __OBJECT_MOTION__
+#  define __HAIR__
+#  define __BAKING__
 #endif
 
 #ifdef WITH_CYCLES_DEBUG
@@ -774,6 +777,8 @@ typedef struct Intersection {
 	int entry_prim = GEOPATTERN_NO_LINK;
 	int entry_object = GEOPATTERN_NO_LINK;
     Mat3 T;
+    float3 offset_up;
+    float3 offset_down;
 #ifdef __KERNEL_DEBUG__
 	int num_traversed_nodes;
 	int num_traversed_instances;
@@ -1106,6 +1111,10 @@ typedef ccl_addr_space struct ShaderData {
 	/* ray start position, only set for backgrounds */
 	float3 ray_P;
 	differential3 ray_dP;
+
+	bool geopattern = false;
+	float3 offset_up;
+	float3 offset_down;
 
 #ifdef __OSL__
 	struct KernelGlobals *osl_globals;

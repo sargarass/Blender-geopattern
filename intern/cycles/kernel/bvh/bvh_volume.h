@@ -162,7 +162,7 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 					}
 				}
 			}
-
+            printf("volume\n");
 			/* if node is leaf, fetch triangle list */
 			if(node_addr < 0) {
 				float4 leaf = kernel_tex_fetch(__bvh_leaf_nodes, (-node_addr-1));

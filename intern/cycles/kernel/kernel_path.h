@@ -80,7 +80,11 @@ ccl_device_noinline void kernel_path_ao(KernelGlobals *kg,
 		Ray light_ray;
 		float3 ao_shadow;
 
-		light_ray.P = ray_offset(sd->P, sd->Ng);
+		if (sd->geopattern) {
+			light_ray.P = sd->offset_up;
+		} else {
+			light_ray.P = ray_offset(sd->P, sd->Ng);
+		}
 		light_ray.D = ao_D;
 		light_ray.t = kernel_data.background.ao_distance;
 #ifdef __OBJECT_MOTION__
@@ -636,7 +640,9 @@ ccl_device_inline float kernel_path_integrate(KernelGlobals *kg,
 		}
 
 		/* setup shading */
+
 		shader_setup_from_ray(kg, &sd, &isect, &ray);
+
 		float rbsdf = path_state_rng_1D_for_decision(kg, rng, &state, PRNG_BSDF);
 		shader_eval_surface(kg, &sd, rng, &state, rbsdf, state.flag, SHADER_CONTEXT_MAIN);
 
@@ -707,6 +713,7 @@ ccl_device_inline float kernel_path_integrate(KernelGlobals *kg,
 		}
 #endif  /* __EMISSION__ */
 
+
 		/* path termination. this is a strange place to put the termination, it's
 		 * mainly due to the mixed in MIS that we use. gives too many unneeded
 		 * shader evaluations, only need emission if we are going to terminate */
@@ -724,7 +731,6 @@ ccl_device_inline float kernel_path_integrate(KernelGlobals *kg,
 		}
 
 		kernel_update_denoising_features(kg, &sd, &state, L);
-
 #ifdef __AO__
 		/* ambient occlusion */
 		if(kernel_data.integrator.use_ambient_occlusion || (sd.flag & SD_AO)) {
@@ -752,6 +758,8 @@ ccl_device_inline float kernel_path_integrate(KernelGlobals *kg,
 #endif  /* __SUBSURFACE__ */
 
 		/* direct lighting */
+
+
 		kernel_path_surface_connect_light(kg, rng, &sd, &emission_sd, throughput, &state, L);
 
 		/* compute direct lighting and next bounce */

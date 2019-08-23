@@ -174,7 +174,11 @@ ccl_device_noinline bool direct_emission(KernelGlobals *kg,
 	if(ls->shader & SHADER_CAST_SHADOW) {
 		/* setup ray */
 		bool transmit = (dot(sd->Ng, ls->D) < 0.0f);
-		ray->P = ray_offset(sd->P, (transmit)? -sd->Ng: sd->Ng);
+		if (sd->geopattern) {
+			ray->P = (transmit)? sd->offset_down : sd->offset_up;
+		} else {
+			ray->P = ray_offset(sd->P, (transmit)? -sd->Ng: sd->Ng);
+		}
 
 		if(ls->t == FLT_MAX) {
 			/* distant light */
