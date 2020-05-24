@@ -2,7 +2,7 @@
 Study project: the main goal of this project was to learn how real production-ready gpu raytracers formulate images and to add a new unsupported feature to the pipeline of such a raytracer. This feature should work on gpu during the ray-mesh intersection stage.
 *If you are looking for production-ready solution, take a look at [Fstorm](https://fstormrender.ru) or [Centileo](www.centileo.com) (in the future). The current implementation has its own limits and bugs/artifacts that don't allow to use it in any kind of production*
 
-[Geopattern](https://fstormrender.ru/manual/geopattern/) can be described as a facility for using mesh in the way as textures can be used, allowing us to create new objects by spreading (mapping) one object onto the surface of another one.
+[Geopattern](https://fstormrender.ru/manual/geopattern/) can be described as a facility for using meshes in the same way as textures, allowing us to create new objects by spreading (mapping) one object onto the surface of another one.
 The same way as instansing does - without a significant increase in memory consumption. You will still have the same number of meshes in the scene, it just changes the way each ray intersects with it.
 <img src="images/mapping.png" width="1000"/>
 
