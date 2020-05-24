@@ -4,7 +4,7 @@ Studing project: main goal of this project was to learn how real production read
 
 [Geopattern](https://fstormrender.ru/manual/geopattern/) can be described as facility to use mesh in a way as textures can be used, allowing us to create new objects by spreading (mapping) one object onto the surface of another.
 Without a significant increase in memory consumption, same as instancing does. You still have same number of meshes in a scene, it just changes the way each ray intersect with it.
-
+<img src="images/shellmapping(en).png" width="1000"/>
 
 # Examples (all images are clickable):
 *Note: in all examples texture cordinates for mapping were automatically generated, cropboxes created by hands. More about those magical words [here](https://fstormrender.ru/manual/geopattern/) (we use same terminology)*
