@@ -4,7 +4,7 @@ Study project: the main goal of this project was to learn how real production-re
 
 [Geopattern](https://fstormrender.ru/manual/geopattern/) can be described as a facility for using meshes in the same way as textures, allowing us to create new objects by spreading (mapping) one object onto the surface of another one.
 The same way as instansing does - without a significant increase in memory consumption. You will still have the same number of meshes in the scene, it just changes the way each ray intersects with it.
-<img src="images/mapping.png" width="1000"/>
+<img src="images/mapping_.png" width="1000"/>
 
 # Examples (all the images are clickable):
 *Note: the texture coordinates for mapping were automatically generated in all the examples, the cropboxes created manually. More about these magical words [here](https://fstormrender.ru/manual/geopattern/) (we use same the terminology)*
