@@ -6,7 +6,7 @@ Studing project: main goal of this project was to learn how real production read
 Without a significant increase in memory consumption, same as instancing does. You still have same number of meshes in a scene, it just changes the way each ray intersect with it.
 
 
-# Examples (images):
+# Examples (all images are clickable):
 *Note: in all examples texture cordinates for mapping were automatically generated, cropboxes created by hands. More about those magical words [here](https://fstormrender.ru/manual/geopattern/) (we use same terminology)*
 
 Starting from simple one to explain what it does: by having piece of a chain and a sphere it can create sphere full covered by chain:
