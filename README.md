@@ -31,6 +31,8 @@ Same piece of chain (436K triangles) was spread over t-short model (4377 triangl
 | Grass over mountain (landscape 67K triangles, grass 50K) ~3.9MB VRAM to storing mesh. 9.7GB without feature | 
 |:--:| 
 | <img src="images/grass.png" width="1000"/> |
+| <img src="images/GrassField_closeup.png" width="1000"/> |
+
 
 | Fibers example | 
 |:--:| 
