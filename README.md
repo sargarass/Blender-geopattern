@@ -9,7 +9,7 @@ The same way as instansing does - without a significant increase in memory consu
 # Examples (all the images are clickable):
 *Note: the texture coordinates for mapping were automatically generated in all the examples, the cropboxes created manually. More about these magical words [here](https://fstormrender.ru/manual/geopattern/) (we use the same terminology)*
 
-Starting from the simple one to explain how it works. Having a piece of a chain and a sphere it can a create sphere fully covered by the chain:
+Starting from the simple one to explain how it works. Having a piece of a chain and a sphere it can create a sphere fully covered by the chain:
 | *Patch* of a chain  |  Simple sphere |
 |-------------------------|------------------------------|
  <img src="images/piece_of_chain.png" width="425"/> | <img src="images/sphere.png" width="425"/> 
